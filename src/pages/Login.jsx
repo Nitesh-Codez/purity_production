@@ -2,23 +2,19 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-/**
- * Purity Production - Login Component
- * Design: Minimalist Dairy Theme (Blue & White)
- */
-
 function Login() {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lang, setLang] = useState("en");
   const navigate = useNavigate();
 
-  const API = process.env.REACT_APP_API_URL;
+  const API = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
 
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     if (!name.trim()) {
-      setError("Please enter your name to continue.");
+      setError(lang === "en" ? "Please enter your name." : "कृपया अपना नाम दर्ज करें");
       return;
     }
 
@@ -29,148 +25,94 @@ function Login() {
       const res = await axios.post(`${API}/login`, { name: name.trim() });
       const role = res.data.role;
 
-      // Success animation delay (optional)
+      const user = {
+        name: name.trim(),
+        role: role
+      };
+
+      localStorage.setItem("user", JSON.stringify(user));
+
       setTimeout(() => {
-        if (role === "owner") {
-          navigate("/owner");
-        } else if (role === "customer") {
-          navigate("/customer");
-        } else {
-          setError("Role not recognized. Contact admin.");
-        }
-      }, 800);
+        if (role === "owner") navigate("/owner");
+        else if (role === "customer") navigate("/customer");
+        else setError("Role not recognized.");
+      }, 1200);
 
     } catch (err) {
-      console.error(err);
-      setError("User not found or server error. Please try again.");
-    } finally {
+      setError(lang === "en" ? "User not found or server error." : "यूज़र नहीं मिला या सर्वर एरर।");
       setIsLoading(false);
     }
   };
 
-  // Styles Object (Standard CSS-in-JS)
-  const styles = {
-    container: {
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      backgroundColor: "#f0f4f8",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    },
-    card: {
-      backgroundColor: "#ffffff",
-      padding: "40px",
-      borderRadius: "15px",
-      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-      width: "100%",
-      maxWidth: "400px",
-      textAlign: "center",
-    },
-    logoArea: {
-      marginBottom: "20px",
-    },
-    brandName: {
-      color: "#0056b3",
-      fontSize: "24px",
-      fontWeight: "bold",
-      margin: "0",
-      letterSpacing: "1px",
-    },
-    brandTagline: {
-      color: "#6c757d",
-      fontSize: "14px",
-      marginBottom: "30px",
-    },
-    inputGroup: {
-      marginBottom: "20px",
-      textAlign: "left",
-    },
-    label: {
-      display: "block",
-      marginBottom: "8px",
-      fontSize: "14px",
-      color: "#495057",
-      fontWeight: "600",
-    },
-    input: {
-      width: "100%",
-      padding: "12px 15px",
-      borderRadius: "8px",
-      border: "2px solid #e9ecef",
-      fontSize: "16px",
-      boxSizing: "border-box",
-      transition: "border-color 0.3s",
-      outline: "none",
-    },
-    button: {
-      width: "100%",
-      padding: "12px",
-      backgroundColor: isLoading ? "#a0c4ff" : "#0056b3",
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      fontSize: "16px",
-      fontWeight: "600",
-      cursor: isLoading ? "not-allowed" : "pointer",
-      transition: "background 0.3s ease",
-    },
-    errorMsg: {
-      color: "#dc3545",
-      fontSize: "13px",
-      marginTop: "10px",
-      backgroundColor: "#f8d7da",
-      padding: "8px",
-      borderRadius: "5px",
-    },
-    footer: {
-      marginTop: "25px",
-      fontSize: "12px",
-      color: "#adb5bd",
-    }
-  };
-
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logoArea}>
-          {/* Milk Drop Icon Placeholder */}
-          <div style={{fontSize: "40px", marginBottom: "10px"}}>🥛</div>
-          <h1 style={styles.brandName}>PURITY PRODUCTION</h1>
-          <p style={styles.brandTagline}>Freshness you can trust</p>
+    <div className="login-container">
+      {/* CSS Yahan define kiya hai bina JSX attribute ke */}
+      <style>{`
+        .lang-toggle{ position:absolute; top:60px; right:20px; z-index:20; }
+        .lang-toggle button{ background:#0056b3; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
+        .login-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f4f7f9; overflow: hidden; position: relative; font-family: 'Segoe UI', Roboto, sans-serif; }
+        .top-banner { position: absolute; top: 0; width: 100%; background: #1a1a1a; color: #ffffff; text-align: center; padding: 15px 0; font-size: 1.2rem; font-weight: 900; letter-spacing: 3px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10; text-transform: uppercase; }
+        .wave-wrapper { position: absolute; bottom: 0; width: 100%; height: 120px; background: #fff; z-index: 0; }
+        .wave { position: absolute; top: -80px; left: -50%; width: 200%; height: 200%; background: rgba(255, 255, 255, 0.7); border-radius: 43%; animation: drift 6s infinite linear; }
+        @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .login-card { background: white; padding: 40px 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 90%; max-width: 360px; text-align: center; z-index: 5; border-top: 5px solid #0056b3; }
+        .milk-drop { font-size: 45px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .brand-title { color: #1a1a1a; font-size: 26px; margin: 10px 0 0; font-weight: 800; }
+        .brand-subtitle { color: #888; font-size: 13px; margin-bottom: 25px; }
+        .input-box { text-align: left; margin-bottom: 15px; }
+        .input-box label { font-size: 12px; font-weight: bold; color: #444; display: block; margin-bottom: 5px; }
+        .input-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; }
+        .login-btn { width: 100%; padding: 14px; background: #0056b3; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; margin-top: 10px; cursor: pointer; transition: 0.3s; }
+        .error-popup { color: #d9534f; font-size: 13px; margin-top: 15px; padding: 8px; background: #fceeee; border-radius: 5px; }
+        .footer-text { font-size: 10px; color: #bbb; margin-top: 20px; text-transform: uppercase; }
+      `}</style>
+
+      <div className="lang-toggle">
+        <button onClick={() => setLang(lang === "en" ? "hi" : "en")}>
+          {lang === "en" ? "हिंदी" : "English"}
+        </button>
+      </div>
+
+      <div className="top-banner">PURITY PRODUCT </div>
+
+      <div className="wave-wrapper">
+        <div className="wave"></div>
+      </div>
+
+      <div className="login-card">
+        <div className="logo-section">
+          <div className="milk-drop">🥛</div>
+          <h1 className="brand-title">PURITY</h1>
+          <p className="brand-subtitle">100% Pure Production</p>
         </div>
 
-        <form onSubmit={handleLogin}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Apna Name daaliye bina space k</label>
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="input-box">
+            <label>
+              {lang === "en" ? "Enter Your Name (No Space)" : "अपना नाम डालें (बिना स्पेस)"}
+            </label>
             <input
               type="text"
-              placeholder="Rahul"
-              style={styles.input}
+              placeholder={lang === "en" ? "Rahul" : "राहुल"}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
-                if(error) setError("");
+                if (error) setError("");
               }}
-              onFocus={(e) => e.target.style.borderColor = "#0056b3"}
-              onBlur={(e) => e.target.style.borderColor = "#e9ecef"}
+              required
             />
           </div>
 
-          <button 
-            type="submit" 
-            style={styles.button}
-            disabled={isLoading}
-          >
-            {isLoading ? "Verifying..." : "Login to Dashboard"}
+          <button type="submit" className="login-btn" disabled={isLoading}>
+            {isLoading
+              ? lang === "en" ? "Please wait..." : "थोड़ा इंतज़ार करें..."
+              : lang === "en" ? "Login Dashboard" : "डैशबोर्ड लॉगिन"}
           </button>
         </form>
 
-        {error && <div style={styles.errorMsg}>{error}</div>}
-
-        <div style={styles.footer}>
-          &copy; 2024 Purity Production Systems
-        </div>
+        {error && <div className="error-popup">{error}</div>}
+        <p className="footer-text">© 2024 Purity Dairy Systems</p>
       </div>
     </div>
   );
