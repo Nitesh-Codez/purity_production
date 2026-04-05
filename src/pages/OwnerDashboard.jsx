@@ -83,6 +83,9 @@ useEffect(() => {
   key={item.id}
   className="menu-item-card"
   onClick={() => {
+    if (item.id === 1) {
+    navigate("/milk-entry");
+  }
     if (item.id === 7) {
       navigate("/add-customer");
     }
@@ -104,7 +107,7 @@ useEffect(() => {
         <p>© 2026 Purity Product 5D | {t("Software Version", "सॉफ्टवेयर वर्जन")} 2.0</p>
       </footer>
 
-      <style jsx>{`
+      <style>{`
         .dashboard-wrapper {
           min-height: 100vh;
           background: #f8fafc;
