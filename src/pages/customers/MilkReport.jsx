@@ -18,12 +18,12 @@ function MilkReport() {
   const API = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
   const t = (en, hi) => (isHindi ? hi : en);
 
-  // आपकी दी हुई मिल्क ऑप्शंस लिस्ट
+  // मात्रा को सुंदर नाम देने के लिए ऑप्शंस
   const milkOptions = [
     { label: "Holiday / नागा", value: 0.00 },
     { label: "250g", value: 0.25 },
     { label: "500g", value: 0.50 },
-    { label: "500g 250g", value: 0.75 },
+    { label: "750g", value: 0.75 },
     { label: "1kg", value: 1.00 },
     { label: "1kg 250g", value: 1.25 },
     { label: "1kg 500g", value: 1.50 },
@@ -76,8 +76,8 @@ function MilkReport() {
     fetchReport();
   }, [fetchReport]);
 
-  // वैल्यू को लेबल में बदलने वाला फंक्शन
-  const getMilkLabel = (date, name) => {
+  // टेबल सेल में क्या दिखाना है, उसे तय करने वाला फंक्शन
+  const getMilkDisplay = (date, name) => {
     const entry = reportData.find(item => 
       item.delivery_date.split("T")[0] === date && item.name === name
     );
@@ -85,12 +85,11 @@ function MilkReport() {
     
     const qty = parseFloat(entry.milk_quantity);
     
-    // अगर नागा है
     if (qty === 0) return <span className="naga-text">{t("Naga", "नागा")}</span>;
 
-    // milkOptions में से सही लेबल ढूंढना
-    const option = milkOptions.find(opt => opt.value === qty);
-    return option ? option.label : `${qty}kg`; // अगर लिस्ट में न मिले तो सीधा वैल्यू दिखा दो
+    // वैल्यू के हिसाब से लेबल ढूंढें
+    const matchedOption = milkOptions.find(opt => opt.value === qty);
+    return matchedOption ? matchedOption.label : `${qty}kg`;
   };
 
   return (
@@ -116,9 +115,9 @@ function MilkReport() {
 
       <main className="report-content">
         {loading ? (
-          <div className="center-msg">{t("Loading...", "डाटा आ रहा है...")}</div>
+          <div className="center-msg">{t("Fetching data...", "डाटा लोड हो रहा है...")}</div>
         ) : reportData.length === 0 ? (
-          <div className="center-msg">{t("No Record Found", "कोई रिकॉर्ड नहीं मिला")}</div>
+          <div className="center-msg">{t("No record found", "कोई रिकॉर्ड नहीं मिला")}</div>
         ) : (
           <div className="table-card">
             <table className="report-table">
@@ -140,7 +139,7 @@ function MilkReport() {
                     </td>
                     {customers.map(name => (
                       <td key={name + date} className="qty-val">
-                        {getMilkLabel(date, name)}
+                        {getMilkDisplay(date, name)}
                       </td>
                     ))}
                   </tr>
@@ -156,19 +155,38 @@ function MilkReport() {
         .report-header { background: #1a237e; color: white; padding: 15px 20px; border-radius: 0 0 20px 20px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .back-btn { background: none; border: none; color: white; font-size: 32px; cursor: pointer; padding: 0 10px; }
-        .lang-btn { background: white; color: #1a237e; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .lang-btn { background: white; color: #1a237e; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+        
         .filters { display: flex; gap: 10px; }
-        .filters select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: 600; background: rgba(255,255,255,0.9); }
+        .filters select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: 600; outline: none; background: rgba(255,255,255,0.9); }
+
         .report-content { padding: 12px; }
         .table-card { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: auto; max-height: 78vh; }
+        
         .report-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        .report-table th, .report-table td { border: 1px solid #eef0f2; padding: 12px 6px; text-align: center; font-size: 12px; }
-        .report-table th { background: #f1f3f9; color: #1a237e; position: sticky; top: 0; z-index: 20; }
-        .sticky-col { position: sticky; left: 0; background: #fff; z-index: 30; border-right: 2px solid #1a237e !important; min-width: 65px; font-weight: bold; }
+        .report-table th, .report-table td { border: 1px solid #eef0f2; padding: 12px 10px; text-align: center; font-size: 13px; }
+        
+        .report-table th { background: #f1f3f9; color: #1a237e; font-weight: 700; position: sticky; top: 0; z-index: 20; white-space: nowrap; }
+        
+        /* तारीख वाले कॉलम की विड्थ कम और स्थिर रखने के लिए */
+        .sticky-col { 
+          position: sticky; 
+          left: 0; 
+          background: #fff; 
+          z-index: 30; 
+          border-right: 2.5px solid #1a237e !important; 
+          width: 60px; 
+          max-width: 60px;
+          font-weight: bold; 
+        }
+        
         thead .sticky-col { background: #f1f3f9; z-index: 40; }
+        
+        .date-val { color: #444; font-size: 12px; }
         .qty-val { color: #2e7d32; font-weight: 600; white-space: nowrap; }
-        .naga-text { color: #d32f2f; font-weight: 800; font-size: 11px; }
-        .center-msg { text-align: center; padding: 80px 20px; color: #666; }
+        .naga-text { color: #d32f2f; font-weight: 800; font-size: 11px; text-transform: uppercase; }
+
+        .center-msg { text-align: center; padding: 80px 20px; color: #666; font-size: 15px; }
       `}</style>
     </div>
   );

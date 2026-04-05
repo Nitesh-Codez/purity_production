@@ -68,11 +68,11 @@ useEffect(() => {
       <div className="stats-row">
         <div className="stat-card">
           <span className="stat-label">{t("Today's Total", "आज का कुल दूध")}</span>
-          <span className="stat-value">480 L</span>
+          <span className="stat-value">L</span>
         </div>
         <div className="stat-card blue-card">
           <span className="stat-label">{t("Total Revenue", "कुल कमाई")}</span>
-          <span className="stat-value">₹18,500</span>
+          <span className="stat-value">₹</span>
         </div>
       </div>
 
@@ -85,6 +85,9 @@ useEffect(() => {
   onClick={() => {
     if (item.id === 1) {
     navigate("/milk-entry");
+  }
+   if (item.id === 8) {
+    navigate("/milk-report");
   }
     if (item.id === 7) {
       navigate("/add-customer");

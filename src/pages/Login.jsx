@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
-  const [name, setName] = useState("");
+  // LocalStorage se pehle se save kiya hua naam uthao agar hai toh
+  const [name, setName] = useState(() => localStorage.getItem("savedLoginName") || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [lang, setLang] = useState("en");
@@ -25,12 +26,12 @@ function Login() {
       const res = await axios.post(`${API}/login`, { name: name.trim() });
       const role = res.data.role;
 
-      const user = {
-        name: name.trim(),
-        role: role
-      };
-
+      // User ki details save kar rahe hain session ke liye
+      const user = { name: name.trim(), role: role };
       localStorage.setItem("user", JSON.stringify(user));
+      
+      // ISSE SUGGESTION AAYEGA: Browser ko yaad dilane ke liye alag se name save kar rahe hain
+      localStorage.setItem("savedLoginName", name.trim());
 
       setTimeout(() => {
         if (role === "owner") navigate("/owner");
@@ -46,7 +47,6 @@ function Login() {
 
   return (
     <div className="login-container">
-      {/* CSS Yahan define kiya hai bina JSX attribute ke */}
       <style>{`
         .lang-toggle{ position:absolute; top:60px; right:20px; z-index:20; }
         .lang-toggle button{ background:#0056b3; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
@@ -76,9 +76,7 @@ function Login() {
 
       <div className="top-banner">PURITY PRODUCT </div>
 
-      <div className="wave-wrapper">
-        <div className="wave"></div>
-      </div>
+      <div className="wave-wrapper"><div className="wave"></div></div>
 
       <div className="login-card">
         <div className="logo-section">
@@ -87,13 +85,16 @@ function Login() {
           <p className="brand-subtitle">100% Pure Production</p>
         </div>
 
-        <form onSubmit={handleLogin} className="login-form">
+        {/* Browser ko hint dene ke liye autocomplete="on" rakha hai */}
+        <form onSubmit={handleLogin} className="login-form" autoComplete="on">
           <div className="input-box">
             <label>
-              {lang === "en" ? "Enter Your Name (No Space)" : "अपना नाम डालें (बिना स्पेस)"}
+              {lang === "en" ? "Enter Your Name" : "अपना नाम डालें"}
             </label>
             <input
               type="text"
+              name="username" // Name attribute browser suggestion ke liye zaroori hai
+              autoComplete="username" // Browser ko batata hai ki ye username field hai
               placeholder={lang === "en" ? "Rahul" : "राहुल"}
               value={name}
               onChange={(e) => {
@@ -112,7 +113,7 @@ function Login() {
         </form>
 
         {error && <div className="error-popup">{error}</div>}
-        <p className="footer-text">© 2024 Purity Dairy Systems</p>
+        <p className="footer-text">© 2026 Purity Dairy Systems</p>
       </div>
     </div>
   );

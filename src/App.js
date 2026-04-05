@@ -3,8 +3,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import CustomerDashboard from "./pages/CustomerDashboard";
-import AddCustomer from "./pages/customers/AddCustomer";
+import AddCustomers from "./pages/customers/AddCustomers";
 import MilkEntry from "./pages/customers/MilkEntry";
+import MilkReport from "./pages/customers/MilkReport";
 
 function App() {
   return (
@@ -13,8 +14,9 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/owner" element={<OwnerDashboard />} />
         <Route path="/customer" element={<CustomerDashboard />} />
-        <Route path="/add-customer" element={<AddCustomer />} />
+        <Route path="/add-customer" element={<AddCustomers />} />
         <Route path="/milk-entry" element={<MilkEntry />} />
+        <Route path="/milk-report" element={<MilkReport />} />
       </Routes>
     </BrowserRouter>
   );
