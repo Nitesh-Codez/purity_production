@@ -29,40 +29,39 @@ function MilkEntry() {
   ];
 
   const fetchData = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/api/customers`);
-      const data = res.data.data;
-      setCustomers(data);
-      
-      const defaults = {};
-      const namesToTranslate = [];
+  try {
+    const res = await axios.get(`${API}/api/customers`);
+    const data = res.data.data;
+    setCustomers(data);
 
-      data.forEach(c => {
-        // डिफ़ॉल्ट मात्रा 0.50 सेट कर रहे हैं
-        defaults[c.id] = 0.50; 
-        if (c.name) namesToTranslate.push(c.name);
-      });
-      setMilk(defaults);
+    const defaults = {};
+    const namesToTranslate = [];
 
-      if (isHindi && namesToTranslate.length > 0) {
-        try {
-          const transRes = await axios.post(`${API}/api/translate-list`, {
-            texts: [...new Set(namesToTranslate)]
-          });
-          setTranslatedData(transRes.data);
-        } catch (err) {
-          console.error("Transliteration error", err);
-        }
+    data.forEach(c => {
+      // DB se default_milk_quantity set kar rahe hain
+      defaults[c.id] = c.default_milk_quantity ?? 0.50; // agar null ho to 0.50
+      if (c.name) namesToTranslate.push(c.name);
+    });
+    setMilk(defaults);
+
+    if (isHindi && namesToTranslate.length > 0) {
+      try {
+        const transRes = await axios.post(`${API}/api/translate-list`, {
+          texts: [...new Set(namesToTranslate)]
+        });
+        setTranslatedData(transRes.data);
+      } catch (err) {
+        console.error("Transliteration error:", err);
       }
-    } catch (err) {
-      console.error("Fetch error", err);
     }
-  }, [API, isHindi]);
+  } catch (err) {
+    console.error("Fetch error:", err);
+  }
+}, [API, isHindi]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
+useEffect(() => {
+  fetchData();
+}, [fetchData]);
   const saveMilk = async (id) => {
     const qty = milk[id];
     const customer = customers.find(c => c.id === id);

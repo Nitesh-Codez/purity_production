@@ -6,6 +6,9 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import AddCustomers from "./pages/customers/AddCustomers";
 import MilkEntry from "./pages/customers/MilkEntry";
 import MilkReport from "./pages/customers/MilkReport";
+import MonthlyBillPage from "./pages/customers/MonthlyBillPage";
+import CustomerCardsPage from "./pages/customers/CustomerCardsPage"; // Jo abhi banaya hai
+
 
 function App() {
   return (
@@ -17,6 +20,8 @@ function App() {
         <Route path="/add-customer" element={<AddCustomers />} />
         <Route path="/milk-entry" element={<MilkEntry />} />
         <Route path="/milk-report" element={<MilkReport />} />
+        <Route path="/monthly-bill" element={<MonthlyBillPage />} />
+        <Route path="/customer-reports" element={<CustomerCardsPage />} />
       </Routes>
     </BrowserRouter>
   );
