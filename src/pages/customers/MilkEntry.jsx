@@ -2,23 +2,19 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-function MilkReport() {
+function MilkEntry() {
   const navigate = useNavigate();
-  const [reportData, setReportData] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [isHindi, setIsHindi] = useState(true);
-  const [translatedNames, setTranslatedNames] = useState({});
   const [customers, setCustomers] = useState([]);
-  const [dates, setDates] = useState([]);
-  
-  const today = new Date();
-  const [month, setMonth] = useState(today.getMonth() + 1);
-  const [year, setYear] = useState(today.getFullYear());
+  const [milk, setMilk] = useState({});
+  const [translatedData, setTranslatedData] = useState({});
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [message, setMessage] = useState({ text: "", type: "" });
 
   const API = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
+
   const t = (en, hi) => (isHindi ? hi : en);
 
-  // आपकी दी हुई मिल्क ऑप्शंस लिस्ट
   const milkOptions = [
     { label: "Holiday / नागा", value: 0.00 },
     { label: "250g", value: 0.25 },
@@ -32,146 +28,172 @@ function MilkReport() {
     { label: "3kg", value: 3.00 },
   ];
 
-  const months = [
-    { v: 1, n: "January / जनवरी" }, { v: 2, n: "February / फरवरी" },
-    { v: 3, n: "March / मार्च" }, { v: 4, n: "April / अप्रैल" },
-    { v: 5, n: "May / मई" }, { v: 6, n: "June / जून" },
-    { v: 7, n: "July / जुलाई" }, { v: 8, n: "August / अगस्त" },
-    { v: 9, n: "September / सितंबर" }, { v: 10, n: "October / अक्टूबर" },
-    { v: 11, n: "November / नवंबर" }, { v: 12, n: "December / दिसंबर" }
-  ];
-
-  const fetchReport = useCallback(async () => {
-    setLoading(true);
+  // डेटा फेच और ट्रांसलिटरेशन लॉजिक
+  const fetchData = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/api/monthly-entries`, {
-        params: { month, year }
-      });
+      const res = await axios.get(`${API}/api/customers`);
+      const data = res.data.data;
+      setCustomers(data);
       
-      const data = res.data.data || [];
-      setReportData(data);
+      const defaults = {};
+      const namesToTranslate = [];
 
-      const uniqueNames = [...new Set(data.map(item => item.name))].sort();
-      setCustomers(uniqueNames);
+      data.forEach(c => {
+        defaults[c.id] = c.daily_milk || 0.50; 
+        if (c.name) namesToTranslate.push(c.name);
+      });
+      setMilk(defaults);
 
-      const uniqueDates = [...new Set(data.map(item => item.delivery_date.split("T")[0]))].sort();
-      setDates(uniqueDates);
-
-      if (isHindi && uniqueNames.length > 0) {
+      // --- LIVE TRANSLITERATION CALL ---
+      if (isHindi && namesToTranslate.length > 0) {
         try {
-          const transRes = await axios.post(`${API}/api/translate-list`, { texts: uniqueNames });
-          setTranslatedNames(transRes.data);
-        } catch (e) { 
-          console.error("Translation Error", e); 
+          const transRes = await axios.post(`${API}/api/translate-list`, {
+            texts: [...new Set(namesToTranslate)]
+          });
+          setTranslatedData(transRes.data);
+        } catch (err) {
+          console.error("Transliteration error", err);
         }
       }
     } catch (err) {
-      console.error("Monthly Fetch Error:", err);
-    } finally {
-      setLoading(false);
+      console.error("Fetch error", err);
     }
-  }, [API, month, year, isHindi]);
+  }, [API, isHindi]);
 
   useEffect(() => {
-    fetchReport();
-  }, [fetchReport]);
+    fetchData();
+  }, [fetchData]);
 
-  // वैल्यू को लेबल में बदलने वाला फंक्शन
-  const getMilkLabel = (date, name) => {
-    const entry = reportData.find(item => 
-      item.delivery_date.split("T")[0] === date && item.name === name
-    );
-    if (!entry) return "-";
+  // दूध चढ़ाने वाला फंक्शन
+  const saveMilk = async (id) => {
+    const qty = milk[id];
+    const customer = customers.find(c => c.id === id);
+    const selectedLabel = milkOptions.find(o => parseFloat(o.value) === parseFloat(qty))?.label;
     
-    const qty = parseFloat(entry.milk_quantity);
-    
-    // अगर नागा है
-    if (qty === 0) return <span className="naga-text">{t("Naga", "नागा")}</span>;
-
-    // milkOptions में से सही लेबल ढूंढना
-    const option = milkOptions.find(opt => opt.value === qty);
-    return option ? option.label : `${qty}kg`; // अगर लिस्ट में न मिले तो सीधा वैल्यू दिखा दो
+    try {
+      await axios.post(`${API}/api/save-entry`, {
+  user_id: id,
+  milk_quantity: qty,
+  delivery_date: selectedDate
+});
+      
+      setMessage({ 
+        text: `${isHindi ? (translatedData[customer.name] || customer.name) : customer.name}: ${qty === 0 ? t("Holiday Set", "नागा लग गया") : selectedLabel + " " + t("Saved", "चढ़ गया")}`, 
+        type: "success" 
+      });
+      setTimeout(() => setMessage({ text: "", type: "" }), 2500);
+    } catch (err) {
+      alert("Error saving data");
+    }
   };
 
   return (
-    <div className="report-wrapper">
-      <header className="report-header">
+    <div className="entry-wrapper">
+      <header className="entry-header">
         <div className="header-top">
           <button className="back-btn" onClick={() => navigate(-1)}>‹</button>
-          <h1>{t("Monthly Sheet", "महीने की शीट")}</h1>
+          <h1>{t("Milk Entry", "दूध चढ़ाएं")}</h1>
           <button className="lang-btn" onClick={() => setIsHindi(!isHindi)}>
             {isHindi ? "English" : "हिंदी"}
           </button>
         </div>
 
-        <div className="filters">
-          <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))}>
-            {months.map(m => <option key={m.v} value={m.v}>{m.n}</option>)}
-          </select>
-          <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-            {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+        <div className="date-selector">
+          <label>{t("Date:", "तारीख:")}</label>
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)} 
+          />
         </div>
       </header>
 
-      <main className="report-content">
-        {loading ? (
-          <div className="center-msg">{t("Loading...", "डाटा आ रहा है...")}</div>
-        ) : reportData.length === 0 ? (
-          <div className="center-msg">{t("No Record Found", "कोई रिकॉर्ड नहीं मिला")}</div>
-        ) : (
-          <div className="table-card">
-            <table className="report-table">
-              <thead>
-                <tr>
-                  <th className="sticky-col">{t("Date", "तारीख")}</th>
-                  {customers.map(name => (
-                    <th key={name}>
-                      {isHindi ? (translatedNames[name] || name) : name}
-                    </th>
+      <main className="entry-list">
+        {message.text && <div className={`toast-msg ${message.type}`}>{message.text}</div>}
+        
+        {customers.map((c) => {
+          const currentQty = milk[c.id];
+          const optionLabel = milkOptions.find(o => parseFloat(o.value) === parseFloat(currentQty))?.label || currentQty;
+
+          return (
+            <div key={c.id} className="entry-card">
+              <div className="info">
+                <span className="name">
+                  {isHindi ? (translatedData[c.name] || c.name) : c.name}
+                </span>
+                <span className="phone">📞 {c.mobile}</span>
+              </div>
+
+              <div className="actions-v2">
+                {/* मात्रा चुनने वाला ड्रॉपडाउन */}
+                <select 
+                  value={currentQty} 
+                  onChange={(e) =>
+  setMilk({ ...milk, [c.id]: parseFloat(e.target.value) })
+}
+                  className="qty-dropdown"
+                >
+                  {milkOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {dates.map(date => (
-                  <tr key={date}>
-                    <td className="sticky-col date-val">
-                      {new Date(date).toLocaleDateString('en-GB', {day:'2-digit', month:'2-digit'})}
-                    </td>
-                    {customers.map(name => (
-                      <td key={name + date} className="qty-val">
-                        {getMilkLabel(date, name)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </select>
+
+                {/* बड़ा 'दूध चढ़ाएं' बटन जो चुनी हुई मात्रा दिखाता है */}
+                <button 
+                  className={`big-save-btn ${parseFloat(currentQty) === 0 ? 'is-naga' : ''}`}
+                  onClick={() => saveMilk(c.id)}
+                >
+                  <span className="btn-label">{optionLabel}</span>
+                  <span className="btn-sub">{t("Tap to Save", "चढ़ाए")}</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </main>
 
       <style>{`
-        .report-wrapper { background: #f0f2f5; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
-        .report-header { background: #1a237e; color: white; padding: 15px 20px; border-radius: 0 0 20px 20px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .back-btn { background: none; border: none; color: white; font-size: 32px; cursor: pointer; padding: 0 10px; }
-        .lang-btn { background: white; color: #1a237e; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; }
-        .filters { display: flex; gap: 10px; }
-        .filters select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: 600; background: rgba(255,255,255,0.9); }
-        .report-content { padding: 12px; }
-        .table-card { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: auto; max-height: 78vh; }
-        .report-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        .report-table th, .report-table td { border: 1px solid #eef0f2; padding: 12px 6px; text-align: center; font-size: 12px; }
-        .report-table th { background: #f1f3f9; color: #1a237e; position: sticky; top: 0; z-index: 20; }
-        .sticky-col { position: sticky; left: 0; background: #fff; z-index: 30; border-right: 2px solid #1a237e !important; min-width: 65px; font-weight: bold; }
-        thead .sticky-col { background: #f1f3f9; z-index: 40; }
-        .qty-val { color: #2e7d32; font-weight: 600; white-space: nowrap; }
-        .naga-text { color: #d32f2f; font-weight: 800; font-size: 11px; }
-        .center-msg { text-align: center; padding: 80px 20px; color: #666; }
+        .entry-wrapper { background: #f0f2f5; min-height: 100vh; font-family: 'Segoe UI', sans-serif; padding-bottom: 40px; }
+        
+        .entry-header { background: #1a237e; color: white; padding: 15px 20px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-top h1 { font-size: 20px; margin: 0; font-weight: 600; }
+        
+        .back-btn { background: rgba(255,255,255,0.1); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .lang-btn { background: white; color: #1a237e; border: none; padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .date-selector { background: rgba(255,255,255,0.15); padding: 8px 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .date-selector label { font-size: 14px; font-weight: 500; }
+        .date-selector input { border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-family: inherit; }
+
+        .entry-list { padding: 15px; }
+        .toast-msg { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); background: #2e7d32; color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-weight: 500; min-width: 200px; text-align: center; }
+
+        .entry-card { background: white; margin-bottom: 15px; padding: 18px; border-radius: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eee; }
+        .info { margin-bottom: 12px; }
+        .name { display: block; font-weight: 700; font-size: 17px; color: #1a1a1a; margin-bottom: 2px; }
+        .phone { font-size: 13px; color: #666; font-weight: 500; }
+
+        /* NEW ACTIONS LAYOUT */
+        .actions-v2 { display: flex; gap: 10px; height: 55px; }
+        
+        .qty-dropdown { flex: 1; padding: 0 10px; border-radius: 12px; border: 2px solid #e0e0e0; font-size: 14px; font-weight: 600; background: #fafafa; color: #333; outline: none; }
+        .qty-dropdown:focus { border-color: #1a237e; }
+
+        .big-save-btn { flex: 2; background: #1a237e; color: white; border: none; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .big-save-btn:active { transform: scale(0.96); }
+        .big-save-btn.is-naga { background: #d32f2f; } /* नागा के लिए लाल रंग */
+
+        .btn-label { font-size: 15px; font-weight: 800; }
+        .btn-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+
+        @media (max-width: 400px) {
+          .name { font-size: 15px; }
+          .btn-label { font-size: 14px; }
+        }
       `}</style>
     </div>
   );
 }
 
-export default MilkReport;
+export default MilkEntry;
