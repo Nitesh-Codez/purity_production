@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 /**
  * Purity - Monthly Bill Management System
- * Optimized UI: Compact Rate Box & Prominent Action Button
+ * Optimized UI: Fixed Syntax & Alignment
  */
 
 function MonthlyBillPage() {
@@ -41,8 +41,7 @@ function MonthlyBillPage() {
     const grams = Math.round((num - kg) * 1000);
     let res = "";
     if (kg > 0) res += `${kg}kg `;
-    if (grams === 750) res += "500g 250g";
-    else if (grams > 0) res += `${grams}g`;
+    if (grams > 0) res += `${grams}g`;
     return res.trim();
   };
 
@@ -66,7 +65,7 @@ function MonthlyBillPage() {
       }
 
       if(isInitial) {
-        showPopup(t("Welcome! Please enter Rate.", "स्वागत है! बिल निकालने के लिए रेट डालें।"));
+        showPopup(t("Welcome! Enter Rate.", "स्वागत है! बिल के लिए रेट डालें।"));
       }
     } catch (err) {
       console.error("Fetch Error:", err);
@@ -95,7 +94,7 @@ function MonthlyBillPage() {
       });
       setBills(res.data.data || []);
       setIsCalculated(true);
-      showPopup(t("Calculated!", "बिल बन गया है! अब आप भेज सकते हैं।"), "success");
+      showPopup(t("Calculated!", "हिसाब हो गया है!"), "success");
     } catch (err) {
       console.log("Auto calc error");
     }
@@ -112,7 +111,7 @@ function MonthlyBillPage() {
         month, year, price_per_kg: price
       });
       if (res.data.success) {
-        showPopup(t("Sent!", "बिल सफलतापूर्वक भेज दिया गया है!"), "success");
+        showPopup(t("Sent!", "बिल भेज दिया गया है!"), "success");
       }
     } catch (err) {
       showPopup("Error saving bill");
@@ -177,7 +176,7 @@ function MonthlyBillPage() {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <p>{t("Calculating...", "थोड़ा इंतज़ार कीजिए, हिसाब जोड़ा जा रहा है...")}</p>
+            <p>{t("Please wait...", "थोड़ा इंतज़ार कीजिए, हिसाब जोड़ा जा रहा है...")}</p>
           </div>
         ) : (
           <div className="table-card">
@@ -190,79 +189,57 @@ function MonthlyBillPage() {
                 </tr>
               </thead>
               <tbody>
-                {bills.length > 0 ? (
-                  bills.map((b) => (
-                    <tr key={b.user_id} className="data-row">
-                      <td className="sticky-col customer-cell">
-                        {isHindi ? (translatedNames[b.name] || b.name) : b.name}
-                      </td>
-                      <td className="milk-cell">{formatMilk(b.total_milk)}</td>
-                      <td className="money-cell">
-                        {price > 0 ? (
-                          <span className="money-badge">₹{parseFloat(b.total_money).toLocaleString()}</span>
-                        ) : (
-                          <span className="placeholder-dash">---</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" className="no-data">{t("No Data Found", "डाटा नहीं मिला")}</td>
-                  </tr>
-                )}
-              </tbody>
-              {bills.length > 0 && (
-                <tfoot>
-                  <tr className="footer-row">
-                    <td className="sticky-col">{t("Total", "कुल योग")}</td>
-                    <td>{formatMilk(bills.reduce((s, i) => s + parseFloat(i.total_milk), 0))}</td>
-                    <td className="grand-total">
-                      ₹{bills.reduce((s, i) => s + parseFloat(i.total_money), 0).toLocaleString()}
+                {bills.map((b) => (
+                  <tr key={b.user_id} className="data-row">
+                    <td className="sticky-col customer-cell">
+                      {isHindi ? (translatedNames[b.name] || b.name) : b.name}
+                    </td>
+                    <td className="milk-cell">{formatMilk(b.total_milk)}</td>
+                    <td className="money-cell">
+                      {price > 0 ? (
+                        <span className="money-badge">₹{parseFloat(b.total_money).toLocaleString()}</span>
+                      ) : (
+                        <span className="placeholder-dash">---</span>
+                      )}
                     </td>
                   </tr>
-                </tfoot>
-              )}
+                ))}
+              </tbody>
             </table>
           </div>
         )}
       </main>
 
       <style>{`
-        :root { --primary: #1a237e; --accent: #ffc107; --success: #2ecc71; --bg: #f4f7f6; }
-        .report-wrapper { background: var(--bg); min-height: 100vh; font-family: 'Poppins', sans-serif; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
-        .modal-box { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
-        .modal-icon { font-size: 40px; margin-bottom: 15px; }
-        .modal-close { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 50px; width: 100%; cursor: pointer; font-weight: bold; }
+        :root { --primary: #1a237e; --accent: #ffc107; --bg: #f4f7f6; }
+        .report-wrapper { background: var(--bg); min-height: 100vh; font-family: sans-serif; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-box { background: white; padding: 20px; border-radius: 15px; width: 85%; max-width: 300px; text-align: center; }
+        .modal-close { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 10px; width: 100%; cursor: pointer; margin-top: 15px; }
         .report-header { background: var(--primary); padding: 15px; color: white; position: sticky; top: 0; z-index: 1000; }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .title-text { font-size: 18px; font-weight: 700; margin: 0; }
-        .back-btn { background: none; border: none; color: white; font-size: 24px; }
-        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .title-text { font-size: 18px; margin: 0; }
+        .back-btn { background: none; border: none; color: white; font-size: 20px; }
+        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 2px 8px; border-radius: 5px; font-size: 12px; }
         .filters-container { display: flex; flex-direction: column; gap: 10px; }
-        .select-group { display: flex; gap: 8px; }
-        .select-group select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: 600; }
+        .select-group { display: flex; gap: 5px; }
+        .select-group select { flex: 1; padding: 8px; border-radius: 8px; border: none; }
         .action-group { display: flex; gap: 50px; align-items: center; }
-        .input-wrapper { position: relative; width: 90px; }
-        .currency-tag { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #444; font-weight: bold; }
-        .price-input { width: 100%; padding: 10px 8px 10px 22px; border-radius: 10px; border: none; font-weight: bold; }
-        .submit-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #3949ab; color: #aab6ff; font-weight: 800; font-size: 15px; }
+        .input-wrapper { position: relative; width: 85px; }
+        .currency-tag { position: absolute; left: 5px; top: 50%; transform: translateY(-50%); color: #333; font-weight: bold; }
+        .price-input { width: 100%; padding: 8px 5px 8px 18px; border-radius: 8px; border: none; }
+        .submit-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #3949ab; color: white; font-weight: bold; }
         .submit-btn.ready { background: var(--accent); color: #1a237e; }
-        .report-content { padding: 12px; }
-        .table-card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .report-content { padding: 10px; }
+        .table-card { background: white; border-radius: 10px; overflow: hidden; }
         .report-table { width: 100%; border-collapse: collapse; }
-        .report-table th { background: #f8f9fa; padding: 12px 8px; font-size: 11px; color: #666; border-bottom: 2px solid #eee; }
-        .data-row td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
-        .sticky-col { position: sticky; left: 0; background: white !important; z-index: 10; border-right: 2px solid #f1f1f1; text-align: left !important; min-width: 90px; font-weight: 700; color: var(--primary); }
-        .milk-cell { font-weight: 600; color: #27ae60; }
-        .money-badge { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 6px; font-weight: 800; border: 1px solid #ffeeba; }
-        .footer-row { background: var(--primary); color: white; font-weight: bold; }
-        .footer-row td { padding: 12px; }
-        .grand-total { background: var(--accent); color: black !important; }
-        .loading-container { text-align: center; padding: 50px; }
-        .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .report-table th { background: #eee; padding: 10px 5px; font-size: 11px; }
+        .data-row td { padding: 10px 5px; text-align: center; border-bottom: 1px solid #eee; font-size: 13px; }
+        .sticky-col { position: sticky; left: 0; background: white !important; font-weight: bold; min-width: 80px; text-align: left !important; }
+        .money-badge { background: #fff3cd; padding: 2px 5px; border-radius: 4px; font-weight: bold; }
+        .loading-container { text-align: center; padding: 40px; }
+        .spinner { width: 25px; height: 25px; border: 3px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
