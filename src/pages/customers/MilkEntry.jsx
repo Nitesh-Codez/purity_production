@@ -19,7 +19,7 @@ function MilkEntry() {
     { label: "Holiday / नागा", value: 0 },
     { label: "250g", value: 0.25 },
     { label: "500g", value: 0.50 },
-    { label: "750g", value: 0.75 },
+    { label: "500g 250g", value: 0.75 },
     { label: "1kg", value: 1.00 },
     { label: "1kg 250g", value: 1.25 },
     { label: "1kg 500g", value: 1.50 },
