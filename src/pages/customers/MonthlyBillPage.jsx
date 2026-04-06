@@ -20,7 +20,7 @@ function MonthlyBillPage() {
 
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [year, setYear] = useState(today.getFullYear());
+  const [year] = useState(today.getFullYear());
 
   const API = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
   const t = (en, hi) => (isHindi ? hi : en);
