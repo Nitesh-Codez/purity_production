@@ -2,6 +2,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+/**
+ * Purity - Monthly Bill Management System
+ * Final Optimized Version: Fixed Alignment & Auto-Filters
+ */
+
 function MonthlyBillPage() {
   const navigate = useNavigate();
   const [bills, setBills] = useState([]);
@@ -9,6 +14,7 @@ function MonthlyBillPage() {
   const [isHindi, setIsHindi] = useState(true);
   const [translatedNames, setTranslatedNames] = useState({});
   const [isCalculated, setIsCalculated] = useState(false);
+  
   const [modal, setModal] = useState({ show: false, msg: "", type: "info" });
 
   const today = new Date();
@@ -43,7 +49,7 @@ function MonthlyBillPage() {
     setModal({ show: true, msg, type });
   };
 
-  // Optimized Fetch Function
+  // 1. Optimized Fetch Function
   const fetchMonthlyBill = useCallback(async (isInitial = false) => {
     setLoading(true);
     try {
@@ -52,15 +58,14 @@ function MonthlyBillPage() {
       });
       const data = res.data.data || [];
       setBills(data);
-      
-      // Translation logic
+
       if (isHindi && data.length > 0) {
         const names = data.map(b => b.name);
         const transRes = await axios.post(`${API}/api/translate-list`, { texts: names });
         setTranslatedNames(transRes.data);
       }
-      
-      if(isInitial) {
+
+      if (isInitial) {
         showPopup(t("Welcome! Enter Rate.", "स्वागत है! बिल के लिए रेट डालें।"));
       }
     } catch (err) {
@@ -70,12 +75,17 @@ function MonthlyBillPage() {
     }
   }, [API, month, year, price, isHindi]);
 
-  // Effect: Fetch data when Month or Year changes
+  // Initial Load with Welcome Popup
+  useEffect(() => {
+    fetchMonthlyBill(true);
+  }, []);
+
+  // Auto Refresh when Month or Year changes
   useEffect(() => {
     fetchMonthlyBill(false);
-  }, [month, year]); // Dependency array updated
+  }, [month, year]);
 
-  // Effect: Auto calculation when price changes
+  // 2. Auto Calculation with Success Popup
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (price && parseFloat(price) > 0) handleAutoCalc();
@@ -89,17 +99,27 @@ function MonthlyBillPage() {
       setBills(res.data.data || []);
       setIsCalculated(true);
       showPopup(t("Calculated!", "हिसाब हो गया है!"), "success");
-    } catch (err) { console.log("calc error"); }
+    } catch (err) {
+      console.log("calc error");
+    }
   };
 
   const handleFinalSubmit = async () => {
-    if (!isCalculated) { showPopup(t("Enter rate!", "पहले रेट डालें!")); return; }
+    if (!isCalculated) {
+      showPopup(t("Enter rate!", "पहले रेट डालें!"));
+      return;
+    }
     try {
       setLoading(true);
       const res = await axios.post(`${API}/api/monthly-bill/save`, { month, year, price_per_kg: price });
-      if (res.data.success) showPopup(t("Sent!", "बिल भेज दिया गया है!"), "success");
-    } catch (err) { showPopup("Error saving bill"); }
-    finally { setLoading(false); }
+      if (res.data.success) {
+        showPopup(t("Sent!", "बिल भेज दिया गया है!"), "success");
+      }
+    } catch (err) {
+      showPopup("Error saving bill");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -147,7 +167,7 @@ function MonthlyBillPage() {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <p>{t("Please wait...", "थोड़ा इंतज़ार कीजिए, हिसाब जोड़ा जा रहा है...")}</p>
+            <p>{t("Please wait...", "थोड़ा इंतज़ार कीजिए...")}</p>
           </div>
         ) : (
           <div className="table-card">
@@ -167,7 +187,7 @@ function MonthlyBillPage() {
                     <td>{price > 0 ? <span className="money-badge">₹{parseFloat(b.total_money).toLocaleString()}</span> : "---"}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="3" style={{padding:'20px'}}>{t("No records found.", "कोई रिकॉर्ड नहीं मिला।")}</td></tr>
+                  <tr><td colSpan="3" style={{padding:'20px', textAlign:'center'}}>{t("No records found.", "कोई रिकॉर्ड नहीं मिला।")}</td></tr>
                 )}
               </tbody>
             </table>
@@ -188,7 +208,7 @@ function MonthlyBillPage() {
         .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
         .filters-container { display: flex; flex-direction: column; gap: 10px; }
         .select-group { display: flex; gap: 8px; }
-        .select-group select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; font-size: 14px; }
+        .select-group select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; font-size: 14px; outline: none; }
         .action-group { display: flex; gap: 10px; align-items: center; }
         .input-wrapper { position: relative; width: 85px; }
         .currency-tag { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #333; font-weight: bold; }
