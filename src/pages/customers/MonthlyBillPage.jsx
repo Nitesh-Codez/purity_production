@@ -2,11 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-/**
- * Purity - Monthly Bill Management System
- * Optimized UI: Fixed Syntax & Alignment
- */
-
 function MonthlyBillPage() {
   const navigate = useNavigate();
   const [bills, setBills] = useState([]);
@@ -14,7 +9,6 @@ function MonthlyBillPage() {
   const [isHindi, setIsHindi] = useState(true);
   const [translatedNames, setTranslatedNames] = useState({});
   const [isCalculated, setIsCalculated] = useState(false);
-  
   const [modal, setModal] = useState({ show: false, msg: "", type: "info" });
 
   const today = new Date();
@@ -42,13 +36,14 @@ function MonthlyBillPage() {
     let res = "";
     if (kg > 0) res += `${kg}kg `;
     if (grams > 0) res += `${grams}g`;
-    return res.trim();
+    return res.trim() || "0 kg";
   };
 
   const showPopup = (msg, type = "info") => {
     setModal({ show: true, msg, type });
   };
 
+  // Optimized Fetch Function
   const fetchMonthlyBill = useCallback(async (isInitial = false) => {
     setLoading(true);
     try {
@@ -57,13 +52,14 @@ function MonthlyBillPage() {
       });
       const data = res.data.data || [];
       setBills(data);
-
+      
+      // Translation logic
       if (isHindi && data.length > 0) {
         const names = data.map(b => b.name);
         const transRes = await axios.post(`${API}/api/translate-list`, { texts: names });
         setTranslatedNames(transRes.data);
       }
-
+      
       if(isInitial) {
         showPopup(t("Welcome! Enter Rate.", "स्वागत है! बिल के लिए रेट डालें।"));
       }
@@ -74,50 +70,36 @@ function MonthlyBillPage() {
     }
   }, [API, month, year, price, isHindi]);
 
+  // Effect: Fetch data when Month or Year changes
   useEffect(() => {
-    fetchMonthlyBill(true);
-  }, [fetchMonthlyBill]);
+    fetchMonthlyBill(false);
+  }, [month, year]); // Dependency array updated
 
+  // Effect: Auto calculation when price changes
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (price && parseFloat(price) > 0) {
-        handleAutoCalc();
-      }
+      if (price && parseFloat(price) > 0) handleAutoCalc();
     }, 1000);
     return () => clearTimeout(delayDebounceFn);
   }, [price]);
 
   const handleAutoCalc = async () => {
     try {
-      const res = await axios.get(`${API}/api/monthly-bill`, {
-        params: { month, year, price_per_kg: price }
-      });
+      const res = await axios.get(`${API}/api/monthly-bill`, { params: { month, year, price_per_kg: price } });
       setBills(res.data.data || []);
       setIsCalculated(true);
       showPopup(t("Calculated!", "हिसाब हो गया है!"), "success");
-    } catch (err) {
-      console.log("Auto calc error");
-    }
+    } catch (err) { console.log("calc error"); }
   };
 
   const handleFinalSubmit = async () => {
-    if (!isCalculated) {
-      showPopup(t("Enter rate!", "पहले रेट डालें!"));
-      return;
-    }
+    if (!isCalculated) { showPopup(t("Enter rate!", "पहले रेट डालें!")); return; }
     try {
       setLoading(true);
-      const res = await axios.post(`${API}/api/monthly-bill/save`, {
-        month, year, price_per_kg: price
-      });
-      if (res.data.success) {
-        showPopup(t("Sent!", "बिल भेज दिया गया है!"), "success");
-      }
-    } catch (err) {
-      showPopup("Error saving bill");
-    } finally {
-      setLoading(false);
-    }
+      const res = await axios.post(`${API}/api/monthly-bill/save`, { month, year, price_per_kg: price });
+      if (res.data.success) showPopup(t("Sent!", "बिल भेज दिया गया है!"), "success");
+    } catch (err) { showPopup("Error saving bill"); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -136,9 +118,7 @@ function MonthlyBillPage() {
         <div className="header-top">
           <button className="back-btn" onClick={() => navigate(-1)}>‹</button>
           <h1 className="title-text">{t("Billing Center", "बिलिंग सेंटर")}</h1>
-          <button className="lang-btn" onClick={() => setIsHindi(!isHindi)}>
-            {isHindi ? "English" : "हिंदी"}
-          </button>
+          <button className="lang-btn" onClick={() => setIsHindi(!isHindi)}>{isHindi ? "English" : "हिंदी"}</button>
         </div>
         
         <div className="filters-container">
@@ -154,18 +134,9 @@ function MonthlyBillPage() {
           <div className="action-group">
             <div className="input-wrapper">
               <span className="currency-tag">₹</span>
-              <input 
-                type="number" 
-                placeholder={t("Rate", "भाव")} 
-                className="price-input"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
+              <input type="number" placeholder={t("Rate", "भाव")} className="price-input" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
-            <button 
-              className={`submit-btn ${isCalculated ? 'ready' : ''}`} 
-              onClick={handleFinalSubmit}
-            >
+            <button className={`submit-btn ${isCalculated ? 'ready' : ''}`} onClick={handleFinalSubmit}>
               {isCalculated ? t("Send Bill", "बिल भेजें") : t("Rate?", "रेट?")}
             </button>
           </div>
@@ -185,25 +156,19 @@ function MonthlyBillPage() {
                 <tr>
                   <th className="sticky-col">{t("Customer", "ग्राहक")}</th>
                   <th>{t("Total Milk", "कुल दूध")}</th>
-                  <th className="amount-head">{t("Amount (₹)", "पैसे")}</th>
+                  <th>{t("Amount", "पैसे")}</th>
                 </tr>
               </thead>
               <tbody>
-                {bills.map((b) => (
+                {bills.length > 0 ? bills.map((b) => (
                   <tr key={b.user_id} className="data-row">
-                    <td className="sticky-col customer-cell">
-                      {isHindi ? (translatedNames[b.name] || b.name) : b.name}
-                    </td>
+                    <td className="sticky-col">{isHindi ? (translatedNames[b.name] || b.name) : b.name}</td>
                     <td className="milk-cell">{formatMilk(b.total_milk)}</td>
-                    <td className="money-cell">
-                      {price > 0 ? (
-                        <span className="money-badge">₹{parseFloat(b.total_money).toLocaleString()}</span>
-                      ) : (
-                        <span className="placeholder-dash">---</span>
-                      )}
-                    </td>
+                    <td>{price > 0 ? <span className="money-badge">₹{parseFloat(b.total_money).toLocaleString()}</span> : "---"}</td>
                   </tr>
-                ))}
+                )) : (
+                  <tr><td colSpan="3" style={{padding:'20px'}}>{t("No records found.", "कोई रिकॉर्ड नहीं मिला।")}</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -215,30 +180,31 @@ function MonthlyBillPage() {
         .report-wrapper { background: var(--bg); min-height: 100vh; font-family: sans-serif; }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; }
         .modal-box { background: white; padding: 20px; border-radius: 15px; width: 85%; max-width: 300px; text-align: center; }
-        .modal-close { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 10px; width: 100%; cursor: pointer; margin-top: 15px; }
+        .modal-close { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 10px; width: 100%; cursor: pointer; margin-top: 15px; font-weight: bold; }
         .report-header { background: var(--primary); padding: 15px; color: white; position: sticky; top: 0; z-index: 1000; }
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .title-text { font-size: 18px; margin: 0; }
-        .back-btn { background: none; border: none; color: white; font-size: 20px; }
-        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 2px 8px; border-radius: 5px; font-size: 12px; }
+        .title-text { font-size: 18px; margin: 0; font-weight: bold; }
+        .back-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
         .filters-container { display: flex; flex-direction: column; gap: 10px; }
-        .select-group { display: flex; gap: 5px; }
-        .select-group select { flex: 1; padding: 8px; border-radius: 8px; border: none; }
-        .action-group { display: flex; gap: 50px; align-items: center; }
+        .select-group { display: flex; gap: 8px; }
+        .select-group select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; font-size: 14px; }
+        .action-group { display: flex; gap: 10px; align-items: center; }
         .input-wrapper { position: relative; width: 85px; }
-        .currency-tag { position: absolute; left: 5px; top: 50%; transform: translateY(-50%); color: #333; font-weight: bold; }
-        .price-input { width: 100%; padding: 8px 5px 8px 18px; border-radius: 8px; border: none; }
-        .submit-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #3949ab; color: white; font-weight: bold; }
+        .currency-tag { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #333; font-weight: bold; }
+        .price-input { width: 100%; padding: 10px 8px 10px 22px; border-radius: 10px; border: none; font-weight: bold; outline: none; font-size: 14px; }
+        .submit-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #3949ab; color: white; font-weight: 800; font-size: 15px; cursor: pointer; }
         .submit-btn.ready { background: var(--accent); color: #1a237e; }
         .report-content { padding: 10px; }
-        .table-card { background: white; border-radius: 10px; overflow: hidden; }
+        .table-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .report-table { width: 100%; border-collapse: collapse; }
-        .report-table th { background: #eee; padding: 10px 5px; font-size: 11px; }
-        .data-row td { padding: 10px 5px; text-align: center; border-bottom: 1px solid #eee; font-size: 13px; }
-        .sticky-col { position: sticky; left: 0; background: white !important; font-weight: bold; min-width: 80px; text-align: left !important; }
-        .money-badge { background: #fff3cd; padding: 2px 5px; border-radius: 4px; font-weight: bold; }
-        .loading-container { text-align: center; padding: 40px; }
-        .spinner { width: 25px; height: 25px; border: 3px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        .report-table th { background: #eee; padding: 12px 8px; font-size: 11px; color: #666; text-align: center; }
+        .data-row td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
+        .sticky-col { position: sticky; left: 0; background: white !important; font-weight: bold; color: var(--primary); text-align: left !important; border-right: 1px solid #eee; min-width: 90px; }
+        .milk-cell { font-weight: bold; color: #27ae60; }
+        .money-badge { background: #fff3cd; padding: 4px 8px; border-radius: 6px; font-weight: bold; color: #856404; }
+        .loading-container { text-align: center; padding: 50px; }
+        .spinner { width: 30px; height: 30px; border: 3px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
