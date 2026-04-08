@@ -27,7 +27,7 @@ useEffect(() => {
   const menuItems = [
     { id: 1, en: "Milk Entry", hi: "दूध की एंट्री", img: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200", icon: "🥛", color: "#e3f2fd", desc: "Daily collection" },
     { id: 2, en: "View Orders", hi: "ऑर्डर देखें", img: "https://thumbs.dreamstime.com/z/purchase-order-online-form-deal-concept-85090475.jpg", icon: "📦", color: "#fff3e0", desc: "Customer requests" },
-    { id: 3, en: "Send Bill", hi: "बिल भेजें", img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=200", icon: "📄", color: "#f1f8e9", desc: "WhatsApp invoices" },
+    { id: 3, en: "Make Bill and Send", hi: "बिल बनाएं और भेजें", img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=200", icon: "📄", color: "#f1f8e9", desc: "WhatsApp invoices" },
     { id: 4, en: "Records", hi: "रिकॉर्ड", img: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=200", icon: "📚", color: "#f3e5f5", desc: "History & Data" },
     { id: 5, en: "Animal Feed", hi: "जानवर का खाना", img: "https://cdn.pixabay.com/photo/2022/12/09/20/49/buffalo-7645996_1280.jpg", icon: "🌾", color: "#efebe9", desc: "Feed & Ration" },
     { id: 6, en: "Expenses", hi: "खर्चे लिखें", img: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200", icon: "💸", color: "#ffebee", desc: "Daily spending" },

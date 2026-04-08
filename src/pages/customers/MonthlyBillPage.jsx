@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 /**
  * Purity - Monthly Bill Management System
- * Final Optimized Version: Fixed Alignment & Auto-Filters
+ * Fixes: Alignment, Sticky Headers, & Clean Cards
  */
 
 function MonthlyBillPage() {
@@ -49,7 +49,6 @@ function MonthlyBillPage() {
     setModal({ show: true, msg, type });
   };
 
-  // 1. Optimized Fetch Function
   const fetchMonthlyBill = useCallback(async (isInitial = false) => {
     setLoading(true);
     try {
@@ -75,20 +74,19 @@ function MonthlyBillPage() {
     }
   }, [API, month, year, price, isHindi]);
 
-  // Initial Load with Welcome Popup
   useEffect(() => {
     fetchMonthlyBill(true);
-  }, []);
+  }, []); // Run only once on mount
 
-  // Auto Refresh when Month or Year changes
   useEffect(() => {
     fetchMonthlyBill(false);
   }, [month, year]);
 
-  // 2. Auto Calculation with Success Popup
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (price && parseFloat(price) > 0) handleAutoCalc();
+      if (price && parseFloat(price) > 0) {
+          handleAutoCalc();
+      }
     }, 1000);
     return () => clearTimeout(delayDebounceFn);
   }, [price]);
@@ -100,7 +98,7 @@ function MonthlyBillPage() {
       setIsCalculated(true);
       showPopup(t("Calculated!", "हिसाब हो गया है!"), "success");
     } catch (err) {
-      console.log("calc error");
+      console.error("Calculation error");
     }
   };
 
@@ -154,10 +152,16 @@ function MonthlyBillPage() {
           <div className="action-group">
             <div className="input-wrapper">
               <span className="currency-tag">₹</span>
-              <input type="number" placeholder={t("Rate", "भाव")} className="price-input" value={price} onChange={(e) => setPrice(e.target.value)} />
+              <input 
+                type="number" 
+                placeholder={t("Rate", "भाव")} 
+                className="price-input" 
+                value={price} 
+                onChange={(e) => {setPrice(e.target.value); setIsCalculated(false);}} 
+              />
             </div>
             <button className={`submit-btn ${isCalculated ? 'ready' : ''}`} onClick={handleFinalSubmit}>
-              {isCalculated ? t("Send Bill", "बिल भेजें") : t("Rate?", "रेट?")}
+              {isCalculated ? t("Send Bill", "बिल भेजें") : t("Enter Rate", "रेट भरें")}
             </button>
           </div>
         </div>
@@ -184,10 +188,10 @@ function MonthlyBillPage() {
                   <tr key={b.user_id} className="data-row">
                     <td className="sticky-col">{isHindi ? (translatedNames[b.name] || b.name) : b.name}</td>
                     <td className="milk-cell">{formatMilk(b.total_milk)}</td>
-                    <td>{price > 0 ? <span className="money-badge">₹{parseFloat(b.total_money).toLocaleString()}</span> : "---"}</td>
+                    <td>{price > 0 ? <span className="money-badge">₹{Math.round(b.total_money).toLocaleString()}</span> : "---"}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="3" style={{padding:'20px', textAlign:'center'}}>{t("No records found.", "कोई रिकॉर्ड नहीं मिला।")}</td></tr>
+                  <tr><td colSpan="3" style={{padding:'40px', textAlign:'center', color: '#999'}}>{t("No records found.", "कोई रिकॉर्ड नहीं मिला।")}</td></tr>
                 )}
               </tbody>
             </table>
@@ -197,35 +201,49 @@ function MonthlyBillPage() {
 
       <style>{`
         :root { --primary: #1a237e; --accent: #ffc107; --bg: #f4f7f6; }
-        .report-wrapper { background: var(--bg); min-height: 100vh; font-family: sans-serif; }
+        .report-wrapper { background: var(--bg); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; }
-        .modal-box { background: white; padding: 20px; border-radius: 15px; width: 85%; max-width: 300px; text-align: center; }
-        .modal-close { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 10px; width: 100%; cursor: pointer; margin-top: 15px; font-weight: bold; }
-        .report-header { background: var(--primary); padding: 15px; color: white; position: sticky; top: 0; z-index: 1000; }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .title-text { font-size: 18px; margin: 0; font-weight: bold; }
-        .back-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
-        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
-        .filters-container { display: flex; flex-direction: column; gap: 10px; }
-        .select-group { display: flex; gap: 8px; }
-        .select-group select { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; font-size: 14px; outline: none; }
+        .modal-box { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-icon { font-size: 40px; margin-bottom: 10px; }
+        .modal-close { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; cursor: pointer; margin-top: 15px; font-weight: bold; font-size: 16px; }
+        
+        /* Header & Filters */
+        .report-header { background: var(--primary); padding: 15px; color: white; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .title-text { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
+        .back-btn { background: rgba(255,255,255,0.1); border: none; color: white; font-size: 28px; cursor: pointer; height: 35px; width: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .lang-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+        
+        .filters-container { display: flex; flex-direction: column; gap: 12px; }
+        .select-group { display: flex; gap: 10px; }
+        .select-group select { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 600; font-size: 14px; outline: none; background: white; color: #333; }
+        
         .action-group { display: flex; gap: 10px; align-items: center; }
-        .input-wrapper { position: relative; width: 85px; }
-        .currency-tag { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #333; font-weight: bold; }
-        .price-input { width: 100%; padding: 10px 8px 10px 22px; border-radius: 10px; border: none; font-weight: bold; outline: none; font-size: 14px; }
-        .submit-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #3949ab; color: white; font-weight: 800; font-size: 15px; cursor: pointer; }
-        .submit-btn.ready { background: var(--accent); color: #1a237e; }
-        .report-content { padding: 10px; }
-        .table-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .input-wrapper { position: relative; flex: 1; }
+        .currency-tag { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #1a237e; font-weight: bold; font-size: 16px; }
+        .price-input { width: 100%; padding: 12px 12px 12px 30px; border-radius: 12px; border: none; font-weight: bold; outline: none; font-size: 16px; box-sizing: border-box; }
+        
+        .submit-btn { flex: 1.5; padding: 12px; border-radius: 12px; border: none; background: #3949ab; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .submit-btn.ready { background: var(--accent); color: #1a237e; box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4); }
+
+        /* Table Content */
+        .report-content { padding: 15px; }
+        .table-card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .report-table { width: 100%; border-collapse: collapse; }
-        .report-table th { background: #eee; padding: 12px 8px; font-size: 11px; color: #666; text-align: center; }
-        .data-row td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
-        .sticky-col { position: sticky; left: 0; background: white !important; font-weight: bold; color: var(--primary); text-align: left !important; border-right: 1px solid #eee; min-width: 90px; }
-        .milk-cell { font-weight: bold; color: #27ae60; }
-        .money-badge { background: #fff3cd; padding: 4px 8px; border-radius: 6px; font-weight: bold; color: #856404; }
-        .loading-container { text-align: center; padding: 50px; }
-        .spinner { width: 30px; height: 30px; border: 3px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .report-table th { background: #f8f9fa; padding: 15px 10px; font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #eee; }
+        
+        .data-row td { padding: 15px 10px; text-align: center; border-bottom: 1px solid #f0f0f0; font-size: 15px; color: #333; }
+        .sticky-col { position: sticky; left: 0; background: white !important; font-weight: 700; color: var(--primary); text-align: left !important; border-right: 1px solid #eee; min-width: 110px; z-index: 10; }
+        
+        .milk-cell { font-weight: 700; color: #2ecc71; }
+        .money-badge { background: #fff9db; padding: 6px 10px; border-radius: 8px; font-weight: 800; color: #926e00; display: inline-block; border: 1px solid #ffe066; }
+
+        /* Utilities */
+        .loading-container { text-align: center; padding: 60px 20px; color: #666; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
