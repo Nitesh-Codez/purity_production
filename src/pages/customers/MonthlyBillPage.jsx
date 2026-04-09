@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 /**
  * Purity - Monthly Bill Management System
- * Fixes: Alignment, Sticky Headers, & Clean Cards
+ * Fixes: ESLint Dependencies, Function Hoisting, & Build Errors
  */
 
 function MonthlyBillPage() {
@@ -23,7 +23,9 @@ function MonthlyBillPage() {
   const [price, setPrice] = useState("");
 
   const API = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
-  const t = (en, hi) => (isHindi ? hi : en);
+
+  // FIX: Wrap 't' in useCallback to prevent dependency changes on every render
+  const t = useCallback((en, hi) => (isHindi ? hi : en), [isHindi]);
 
   const months = [
     { v: 1, n: "January / जनवरी" }, { v: 2, n: "February / फरवरी" },
@@ -45,9 +47,9 @@ function MonthlyBillPage() {
     return res.trim() || "0 kg";
   };
 
-  const showPopup = (msg, type = "info") => {
+  const showPopup = useCallback((msg, type = "info") => {
     setModal({ show: true, msg, type });
-  };
+  }, []);
 
   const fetchMonthlyBill = useCallback(async (isInitial = false) => {
     setLoading(true);
@@ -72,22 +74,10 @@ function MonthlyBillPage() {
     } finally {
       setLoading(false);
     }
-  }, [API, month, year, price, isHindi,t]);
+  }, [API, month, year, price, isHindi, t, showPopup]);
 
-  useEffect(() => {
-    fetchMonthlyBill(true);
-  }, [fetchMonthlyBill]); // Run only once on mount
-
- useEffect(() => {
-  const delayDebounceFn = setTimeout(() => {
-    if (price && parseFloat(price) > 0) {
-        handleAutoCalc();
-    }
-  }, 1000);
-  return () => clearTimeout(delayDebounceFn);
-}, [price, handleAutoCalc]);
-
-  const handleAutoCalc = async () => {
+  // FIX: Defined handleAutoCalc BEFORE useEffect and wrapped in useCallback
+  const handleAutoCalc = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/api/monthly-bill`, { params: { month, year, price_per_kg: price } });
       setBills(res.data.data || []);
@@ -96,7 +86,20 @@ function MonthlyBillPage() {
     } catch (err) {
       console.error("Calculation error");
     }
-  };
+  }, [API, month, year, price, showPopup, t]);
+
+  useEffect(() => {
+    fetchMonthlyBill(true);
+  }, [fetchMonthlyBill]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (price && parseFloat(price) > 0) {
+        handleAutoCalc();
+      }
+    }, 1000);
+    return () => clearTimeout(delayDebounceFn);
+  }, [price, handleAutoCalc]);
 
   const handleFinalSubmit = async () => {
     if (!isCalculated) {
@@ -198,45 +201,32 @@ function MonthlyBillPage() {
       <style>{`
         :root { --primary: #1a237e; --accent: #ffc107; --bg: #f4f7f6; }
         .report-wrapper { background: var(--bg); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; }
         .modal-box { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-icon { font-size: 40px; margin-bottom: 10px; }
         .modal-close { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; cursor: pointer; margin-top: 15px; font-weight: bold; font-size: 16px; }
-        
-        /* Header & Filters */
         .report-header { background: var(--primary); padding: 15px; color: white; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .title-text { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
         .back-btn { background: rgba(255,255,255,0.1); border: none; color: white; font-size: 28px; cursor: pointer; height: 35px; width: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
         .lang-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-        
         .filters-container { display: flex; flex-direction: column; gap: 12px; }
         .select-group { display: flex; gap: 10px; }
         .select-group select { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 600; font-size: 14px; outline: none; background: white; color: #333; }
-        
         .action-group { display: flex; gap: 10px; align-items: center; }
         .input-wrapper { position: relative; flex: 1; }
         .currency-tag { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #1a237e; font-weight: bold; font-size: 16px; }
         .price-input { width: 100%; padding: 12px 12px 12px 30px; border-radius: 12px; border: none; font-weight: bold; outline: none; font-size: 16px; box-sizing: border-box; }
-        
         .submit-btn { flex: 1.5; padding: 12px; border-radius: 12px; border: none; background: #3949ab; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
         .submit-btn.ready { background: var(--accent); color: #1a237e; box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4); }
-
-        /* Table Content */
         .report-content { padding: 15px; }
         .table-card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .report-table { width: 100%; border-collapse: collapse; }
         .report-table th { background: #f8f9fa; padding: 15px 10px; font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #eee; }
-        
         .data-row td { padding: 15px 10px; text-align: center; border-bottom: 1px solid #f0f0f0; font-size: 15px; color: #333; }
         .sticky-col { position: sticky; left: 0; background: white !important; font-weight: 700; color: var(--primary); text-align: left !important; border-right: 1px solid #eee; min-width: 110px; z-index: 10; }
-        
         .milk-cell { font-weight: 700; color: #2ecc71; }
         .money-badge { background: #fff9db; padding: 6px 10px; border-radius: 8px; font-weight: 800; color: #926e00; display: inline-block; border: 1px solid #ffe066; }
-
-        /* Utilities */
         .loading-container { text-align: center; padding: 60px 20px; color: #666; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
