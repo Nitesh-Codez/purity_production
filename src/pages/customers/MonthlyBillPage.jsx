@@ -72,24 +72,20 @@ function MonthlyBillPage() {
     } finally {
       setLoading(false);
     }
-  }, [API, month, year, price, isHindi]);
+  }, [API, month, year, price, isHindi,t]);
 
   useEffect(() => {
     fetchMonthlyBill(true);
-  }, []); // Run only once on mount
+  }, [fetchMonthlyBill]); // Run only once on mount
 
-  useEffect(() => {
-    fetchMonthlyBill(false);
-  }, [month, year]);
-
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (price && parseFloat(price) > 0) {
-          handleAutoCalc();
-      }
-    }, 1000);
-    return () => clearTimeout(delayDebounceFn);
-  }, [price]);
+ useEffect(() => {
+  const delayDebounceFn = setTimeout(() => {
+    if (price && parseFloat(price) > 0) {
+        handleAutoCalc();
+    }
+  }, 1000);
+  return () => clearTimeout(delayDebounceFn);
+}, [price, handleAutoCalc]);
 
   const handleAutoCalc = async () => {
     try {
