@@ -105,7 +105,7 @@ function CustomerCardsPage() {
               <div className="stats-container">
                 <div className="stat-row">
                   <span className="label">🥛 {t("Milk", "कुल दूध")}:</span>
-                  <span className="val milk">{c.total_milk} L</span>
+                  <span className="val milk">{c.total_milk} Kg</span>
                 </div>
                 
                 <div className="stat-row">

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function CustomerDashboard() {
   const [isHindi, setIsHindi] = useState(true);
+  const navigate = useNavigate();
 
   // Language Toggle Function
   const t = (en, hi) => (isHindi ? hi : en);
@@ -47,7 +49,24 @@ function CustomerDashboard() {
       {/* Main Grid Options */}
       <div className="cust-grid">
         {menuItems.map((item) => (
-          <div key={item.id} className="cust-card">
+          <div
+  key={item.id}
+  className="cust-card"
+  onClick={() => {
+
+    if (item.id === 1) {
+      navigate("/today-milk");
+    }
+
+    if (item.id === 2) {
+      navigate("/milk-list");
+    }
+    if(item.id === 3){
+      navigate("/customer-order");
+    }
+
+  }}
+>
             <div className="cust-card-inner" style={{ backgroundColor: item.color }}>
               <div className="cust-icon-circle">{item.icon}</div>
               <div className="cust-card-content">

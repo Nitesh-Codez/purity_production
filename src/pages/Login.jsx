@@ -35,12 +35,13 @@ function Login() {
         name: name.trim(),
       });
 
-      const role = res.data.role;
+     const { id, name: dbName, role } = res.data;
 
-      const user = {
-        name: name.trim(),
-        role: role,
-      };
+const user = {
+  id: id,                 // 🔥 HERE IS YOUR ID
+  name: dbName,
+  role: role,
+};
 
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("savedLoginName", name.trim());

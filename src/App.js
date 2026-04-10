@@ -7,9 +7,11 @@ import AddCustomers from "./pages/customers/AddCustomers";
 import MilkEntry from "./pages/customers/MilkEntry";
 import MilkReport from "./pages/customers/MilkReport";
 import MonthlyBillPage from "./pages/customers/MonthlyBillPage";
-import CustomerCardsPage from "./pages/customers/CustomerCardsPage"; // Jo abhi banaya hai
-
-
+import CustomerCardsPage from "./pages/customers/CustomerCardsPage";
+import TodayMilk from "./pages/customerReal/todayMilk";
+import MilkList from "./pages/customerReal/milkList"; // Jo abhi banaya hai
+import CustomerOrder from "./pages/customerReal/customerOrder";
+import AdminOrders from "./pages/customers/AdminOrders";
 function App() {
   return (
     <BrowserRouter>
@@ -22,6 +24,10 @@ function App() {
         <Route path="/milk-report" element={<MilkReport />} />
         <Route path="/monthly-bill" element={<MonthlyBillPage />} />
         <Route path="/customer-reports" element={<CustomerCardsPage />} />
+         <Route path="/today-milk" element={<TodayMilk />} />
+        <Route path="/milk-list" element={<MilkList />} />
+        <Route path="/customer-order" element={<CustomerOrder />} />
+        <Route path="/admin-orders" element={<AdminOrders />} />
       </Routes>
     </BrowserRouter>
   );

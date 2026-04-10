@@ -96,9 +96,10 @@ useEffect(() => {
     navigate("/milk-report");
   }
     if (item.id === 7) {
-      navigate("/add-customer");
+      navigate("/add-customer") ;
     }
   }}
+  if
 >
             <div className="image-container">
               <img src={item.img} alt={item.en} />
