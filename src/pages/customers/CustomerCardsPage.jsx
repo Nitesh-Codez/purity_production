@@ -2,17 +2,14 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 
 /**
- * Purity - Customer Billing Cards (Updated with Filters)
- * Features: Month/Year Selection, Hindi Toggle, Auto-Transliteration
+ * Purity - Customer Billing Cards (Premium Dashboard Version)
  */
 
 function CustomerCardsPage() {
   const today = new Date();
   
-  // States for Filter
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
-  
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isHindi, setIsHindi] = useState(true);
@@ -20,7 +17,19 @@ function CustomerCardsPage() {
 
   const API = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
 
-  const t = (en, hi) => (isHindi ? hi : en);
+  const t = useCallback((en, hi) => (isHindi ? hi : en), [isHindi]);
+
+  // Milk Formatting Logic (Same as Billing Page)
+  const formatMilk = (qty) => {
+    const num = parseFloat(qty);
+    if (!num || isNaN(num)) return "0 kg";
+    const kg = Math.floor(num);
+    const grams = Math.round((num - kg) * 1000);
+    let res = "";
+    if (kg > 0) res += `${kg}kg `;
+    if (grams > 0) res += `${grams}g`;
+    return res.trim() || "0 kg";
+  };
 
   const months = [
     { v: 1, n: "January / जनवरी" }, { v: 2, n: "February / फरवरी" },
@@ -47,7 +56,7 @@ function CustomerCardsPage() {
       }
     } catch (err) {
       console.error("Fetch Error:", err);
-      setCards([]); // Clear cards on error
+      setCards([]); 
     } finally {
       setLoading(false);
     }
@@ -57,153 +66,171 @@ function CustomerCardsPage() {
     fetchCards();
   }, [fetchCards]);
 
+  const totalSummary = cards.reduce((acc, curr) => {
+    const milkVal = parseFloat(curr.total_milk) || 0;
+    const billVal = parseFloat(curr.bill_total) || parseFloat(curr.total_money) || 0;
+    acc.milk += milkVal;
+    acc.bill += billVal;
+    return acc;
+  }, { milk: 0, bill: 0 });
+
   return (
-    <div className="page">
+    <div className="page-wrapper">
       <header className="page-header">
         <div className="header-top">
-          <h1 className="title">{t("Billing Cards", "बिलिंग कार्ड्स")}</h1>
-          <button className="lang-toggle" onClick={() => setIsHindi(!isHindi)}>
+          <div className="brand">
+            <div className="logo-box">🥛</div>
+            <h1 className="title-main">{t("Purity Cards", "प्योरिटी कार्ड्स")}</h1>
+          </div>
+          <button className="lang-toggle-btn" onClick={() => setIsHindi(!isHindi)}>
             {isHindi ? "English" : "हिंदी"}
           </button>
         </div>
 
-        <div className="filter-bar">
-          <select 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            className="filter-select"
-          >
+        <div className="filter-grid">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="modern-select">
             {months.map(m => <option key={m.v} value={m.v}>{m.n}</option>)}
           </select>
-
-          <select 
-            value={selectedYear} 
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="filter-select"
-          >
-            {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+          <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="modern-select">
+            {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       </header>
 
-      {loading ? (
-        <div className="loader-box">
-          <div className="spinner"></div>
-          <p>{t("Fetching Data...", "डाटा आ रहा है...")}</p>
-        </div>
-      ) : (
-        <div className="card-grid">
-          {cards.length > 0 ? cards.map((c, i) => (
-            <div key={i} className="card">
-              <div className="card-top">
-                <h2 className="name">
-                  {isHindi ? (translatedNames[c.name] || c.name) : c.name}
-                </h2>
-                <span className="badge">{c.month}/{c.year}</span>
+      <main className="content-container">
+        {loading ? (
+          <div className="loader-overlay">
+            <div className="spinner-modern"></div>
+            <p>{t("Syncing Data...", "डाटा लोड हो रहा है...")}</p>
+          </div>
+        ) : (
+          <div className="card-masonry">
+            {cards.length > 0 ? cards.map((c, i) => {
+              const displayBill = parseFloat(c.bill_total) || parseFloat(c.total_money) || 0;
+              return (
+                <div key={i} className="glass-card">
+                  <div className="card-banner">
+                    <div className="user-profile">
+                      <div className="name-icon">{c.name.charAt(0)}</div>
+                      <h2 className="user-name">{isHindi ? (translatedNames[c.name] || c.name) : c.name}</h2>
+                    </div>
+                    <span className="month-pill">{c.month}/{c.year}</span>
+                  </div>
+
+                  <div className="card-details">
+                    <div className="main-stat">
+                      <span className="stat-label-dark">{t("Total Milk Volume", "कुल दूध की मात्रा")}</span>
+                      <span className="stat-value-milk">{formatMilk(c.total_milk)}</span>
+                    </div>
+                    
+                    <div className="stats-row-modern">
+                      <div className="mini-stat">
+                        <span className="stat-label-dark">{t("Milk Value", "दूध राशि")}</span>
+                        <span className="mini-val">₹{(parseFloat(c.total_money) || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="mini-stat text-right">
+                        <span className="stat-label-dark">{t("Naga/Gaps", "नागा (दिन)")}</span>
+                        <span className="mini-val danger-text">{c.naga_days || 0}</span>
+                      </div>
+                    </div>
+
+                    <div className="final-total-box">
+                      <span className="final-label">{t("Payable Total", "कुल देय राशि")}</span>
+                      <span className="final-amount-val">₹{Math.round(displayBill).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="empty-view">
+                <span>📂</span>
+                <p>{t("No data found for this period.", "इस महीने का कोई डाटा नहीं है।")}</p>
               </div>
+            )}
+          </div>
+        )}
+      </main>
 
-              <div className="stats-container">
-                <div className="stat-row">
-                  <span className="label">🥛 {t("Milk", "कुल दूध")}:</span>
-                  <span className="val milk">{c.total_milk} Kg</span>
-                </div>
-                
-                <div className="stat-row">
-                  <span className="label">💰 {t("Money", "दूध के पैसे")}:</span>
-                  <span className="val money">₹{Math.round(c.total_money)}</span>
-                </div>
-
-                <div className="stat-row">
-                  <span className="label">⚠️ {t("Gaps", "नागा (दिन)")}:</span>
-                  <span className="val naga">{c.naga_days}</span>
-                </div>
-
-                <div className="divider"></div>
-
-                <div className="stat-row final-bill">
-                  <span className="label">{t("Total Bill", "कुल बिल")}:</span>
-                  <span className="val bill">₹{Math.round(c.bill_total)}</span>
-                </div>
-              </div>
-            </div>
-          )) : (
-            <div className="empty-state">
-              <div className="empty-icon">📂</div>
-              <p>{t("No records found for this period.", "इस समय का कोई रिकॉर्ड नहीं मिला।")}</p>
-            </div>
-          )}
-        </div>
+      {!loading && cards.length > 0 && (
+        <footer className="footer-summary-bar">
+          <div className="footer-col">
+            <span className="foot-label">{t("Total Volume", "कुल दूध")}</span>
+            <span className="foot-data">{formatMilk(totalSummary.milk)}</span>
+          </div>
+          <div className="footer-v-line"></div>
+          <div className="footer-col">
+            <span className="foot-label">{t("Expected Revenue", "कुल कलेक्शन")}</span>
+            <span className="foot-data-money">₹{Math.round(totalSummary.bill).toLocaleString()}</span>
+          </div>
+        </footer>
       )}
 
       <style>{`
-        .page { padding: 20px; background: #f0f2f5; min-height: 100vh; font-family: sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        .page-wrapper { background: #f0f4f7; min-height: 100vh; font-family: 'Inter', sans-serif; padding-bottom: 120px; }
         
-        .page-header { margin-bottom: 25px; }
+        /* Header & Filters */
+        .page-header { background: #1a237e; padding: 25px 20px; color: white; border-radius: 0 0 25px 25px; box-shadow: 0 10px 30px rgba(26, 35, 126, 0.2); position: sticky; top: 0; z-index: 1000; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .logo-box { background: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .title-main { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        .lang-toggle-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .lang-toggle-btn:hover { background: white; color: #1a237e; }
         
-        .header-top { 
-          display: flex; justify-content: space-between; align-items: center; 
-          margin-bottom: 15px; 
-        }
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .modern-select { background: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; color: #1a237e; font-size: 14px; outline: none; appearance: none; }
 
-        .title { margin: 0; color: #1a237e; font-size: 22px; font-weight: 800; }
+        /* Card System */
+        .content-container { padding: 20px; }
+        .card-masonry { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
         
-        .lang-toggle { 
-          background: white; border: 1.5px solid #1a237e; color: #1a237e; 
-          padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer;
-        }
+        .glass-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.05); border: 1px solid #eef2f6; transition: transform 0.3s ease; }
+        .glass-card:hover { transform: translateY(-5px); }
 
-        .filter-bar { display: flex; gap: 10px; }
+        .card-banner { padding: 15px 20px; background: #f8fafd; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f4f8; }
+        .user-profile { display: flex; align-items: center; gap: 12px; }
+        .name-icon { width: 36px; height: 36px; background: #3949ab; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+        .user-name { margin: 0; font-size: 17px; font-weight: 800; color: #1a237e; }
+        .month-pill { background: #e8effd; color: #3949ab; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 8px; }
+
+        .card-details { padding: 20px; }
+        .main-stat { margin-bottom: 18px; }
         
-        .filter-select { 
-          flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #ddd;
-          background: white; font-weight: 600; outline: none; color: #333;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .card-grid { 
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-          gap: 20px; 
-        }
-
-        .card { 
-          background: white; border-radius: 20px; padding: 20px; 
-          box-shadow: 0 8px 20px rgba(0,0,0,0.06); border: 1px solid #eee;
-        }
-
-        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .name { margin: 0; color: #1a237e; font-size: 19px; }
-        .badge { background: #e8eaf6; color: #3f51b5; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-
-        .stats-container { display: flex; flex-direction: column; gap: 10px; }
-        .stat-row { display: flex; justify-content: space-between; align-items: center; }
-        .label { color: #666; font-size: 14px; }
-        .val { font-weight: 700; font-size: 15px; }
-
-        .milk { color: #2ecc71; }
-        .money { color: #f39c12; }
-        .naga { color: #e74c3c; }
-        .divider { height: 1px; background: #f0f0f0; margin: 5px 0; }
+        /* BOLD LABELS */
+        .stat-label-dark { font-size: 13px; color: #34495e; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px; }
+        .stat-value-milk { font-size: 24px; font-weight: 800; color: #27ae60; display: block; }
         
-        .final-bill { font-size: 17px; margin-top: 5px; }
-        .bill { color: white; background: #1a237e; padding: 4px 10px; border-radius: 8px; }
+        .stats-row-modern { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 12px 0; border-top: 1px solid #f1f4f8; border-bottom: 1px solid #f1f4f8; }
+        .mini-val { font-size: 16px; font-weight: 700; color: #2c3e50; }
+        .danger-text { color: #e74c3c; }
+        .text-right { text-align: right; }
 
-        .loader-box { text-align: center; margin-top: 50px; }
-        .spinner { 
-          width: 40px; height: 40px; border: 4px solid #f3f3f3; 
-          border-top: 4px solid #1a237e; border-radius: 50%; 
-          animation: spin 1s linear infinite; margin: 0 auto 15px;
-        }
+        .final-total-box { background: #1a237e; padding: 15px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(26, 35, 126, 0.2); }
+        .final-label { color: #c5cae9; font-size: 13px; font-weight: 600; }
+        .final-amount-val { color: white; font-size: 20px; font-weight: 800; }
+
+        /* Sticky Footer */
+        .footer-summary-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 18px; display: flex; justify-content: space-around; align-items: center; border-top: 4px solid #1a237e; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); z-index: 999; border-radius: 20px 20px 0 0; }
+        .footer-col { text-align: center; }
+        .foot-label { font-size: 11px; color: #7f8c8d; font-weight: 800; text-transform: uppercase; }
+        .foot-data { font-size: 18px; font-weight: 800; color: #2c3e50; }
+        .foot-data-money { font-size: 22px; font-weight: 800; color: #1a237e; }
+        .footer-v-line { width: 1px; height: 40px; background: #e0e0e0; }
+
+        /* Loader */
+        .spinner-modern { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-overlay { text-align: center; padding: 100px 0; color: #1a237e; font-weight: 700; }
 
-        .empty-state { 
-          grid-column: 1 / -1; text-align: center; padding: 60px; 
-          background: white; border-radius: 20px; color: #999;
-        }
-        .empty-icon { font-size: 50px; margin-bottom: 10px; }
+        .empty-view { grid-column: 1/-1; text-align: center; padding: 80px; color: #95a5a6; font-weight: 600; }
+        .empty-view span { font-size: 50px; display: block; margin-bottom: 10px; }
 
         @media (max-width: 480px) {
-          .filter-bar { flex-direction: row; }
-          .filter-select { font-size: 13px; }
+          .card-masonry { grid-template-columns: 1fr; }
+          .title-main { font-size: 18px; }
+          .footer-summary-bar { padding: 15px 10px; }
         }
       `}</style>
     </div>
