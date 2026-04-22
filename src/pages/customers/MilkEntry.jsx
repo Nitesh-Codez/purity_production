@@ -16,72 +16,100 @@ function MilkEntry() {
   const t = (en, hi) => (isHindi ? hi : en);
 
   const milkOptions = [
-    { label: "Holiday / नागा", value: 0 },
-    { label: "250g", value: 0.25 },
-    { label: "500g", value: 0.50 },
-    { label: "500g 250g", value: 0.75 },
-    { label: "1kg", value: 1.00 },
-    { label: "1kg 250g", value: 1.25 },
-    { label: "1kg 500g", value: 1.50 },
-    { label: "2kg", value: 2.00 },
-    { label: "2kg 500g", value: 2.50 },
-    { label: "3kg", value: 3.00 },
+    { label: "Holiday / नागा", value: "0" },
+    { label: "250g", value: "0.25" },
+    { label: "500g", value: "0.50" },
+    { label: "500g 250g", value: "0.75" },
+    { label: "1kg", value: "1.00" },
+    { label: "1kg 250g", value: "1.25" },
+    { label: "1kg 500g", value: "1.50" },
+    { label: "2kg", value: "2.00" },
+    { label: "2kg 500g", value: "2.50" },
+    { label: "3kg", value: "3.00" },
   ];
 
-  const fetchData = useCallback(async () => {
-  try {
-    const res = await axios.get(`${API}/api/customers`);
-    const data = res.data.data;
-    setCustomers(data);
-
-    const defaults = {};
-    const namesToTranslate = [];
-
-    data.forEach(c => {
-      // DB se default_milk_quantity set kar rahe hain
-      defaults[c.id] = c.default_milk_quantity ?? 0.50; // agar null ho to 0.50
-      if (c.name) namesToTranslate.push(c.name);
-    });
-    setMilk(defaults);
-
-    if (isHindi && namesToTranslate.length > 0) {
-      try {
-        const transRes = await axios.post(`${API}/api/translate-list`, {
-          texts: [...new Set(namesToTranslate)]
-        });
-        setTranslatedData(transRes.data);
-      } catch (err) {
-        console.error("Transliteration error:", err);
-      }
+  // Voice Functionality
+  const speak = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = isHindi ? 'hi-IN' : 'en-US';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
     }
-  } catch (err) {
-    console.error("Fetch error:", err);
-  }
-}, [API, isHindi]);
+  };
 
-useEffect(() => {
-  fetchData();
-}, [fetchData]);
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/api/customers`);
+      const data = res.data.data;
+      setCustomers(data);
+
+      // Local storage se last saved values uthana
+      const savedMilkData = JSON.parse(localStorage.getItem('last_milk_entries')) || {};
+      const defaults = {};
+      const namesToTranslate = [];
+
+      data.forEach(c => {
+        // Preference: 1. Last saved in session, 2. DB default, 3. 0.50
+        const lastVal = savedMilkData[c.id];
+        const dbDefault = c.default_milk_quantity !== null ? parseFloat(c.default_milk_quantity).toFixed(2) : "0.50";
+        
+        defaults[c.id] = lastVal !== undefined ? lastVal : dbDefault;
+        if (c.name) namesToTranslate.push(c.name);
+      });
+      setMilk(defaults);
+
+      if (isHindi && namesToTranslate.length > 0) {
+        try {
+          const transRes = await axios.post(`${API}/api/translate-list`, {
+            texts: [...new Set(namesToTranslate)]
+          });
+          setTranslatedData(transRes.data);
+        } catch (err) {
+          console.error("Transliteration error:", err);
+        }
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
+  }, [API, isHindi]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   const saveMilk = async (id) => {
     const qty = milk[id];
     const customer = customers.find(c => c.id === id);
-    const selectedOption = milkOptions.find(o => Number(o.value) === Number(qty));
-    
+    const selectedOption = milkOptions.find(o => parseFloat(o.value) === parseFloat(qty));
+    const customerName = isHindi ? (translatedData[customer.name] || customer.name) : customer.name;
+    const displayLabel = parseFloat(qty) === 0 ? t("Holiday", "नागा") : selectedOption?.label;
+
     try {
       await axios.post(`${API}/api/save-entry`, {
         user_id: id,
-        milk_quantity: qty,
+        milk_quantity: parseFloat(qty),
         delivery_date: selectedDate
       });
-      
-      const customerName = isHindi ? (translatedData[customer.name] || customer.name) : customer.name;
-      const displayLabel = Number(qty) === 0 ? t("Holiday", "नागा") : selectedOption?.label;
 
-      setMessage({ 
-        text: `${customerName}: ${displayLabel} ${t("Saved", "चढ़ गया")}`, 
-        type: "success" 
-      });
-      setTimeout(() => setMessage({ text: "", type: "" }), 2500);
+      // Update LocalStorage to remember this value for next time
+      const currentSaved = JSON.parse(localStorage.getItem('last_milk_entries')) || {};
+      currentSaved[id] = qty;
+      localStorage.setItem('last_milk_entries', JSON.stringify(currentSaved));
+
+      // Date format for message (DD-MM-YYYY)
+      const dateParts = selectedDate.split('-');
+      const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+
+      const msgText = `${customerName}: ${displayLabel} (${formattedDate}) ${t("Saved", "चढ़ गया")}`;
+      const voiceText = isHindi 
+        ? `${customerName} का ${displayLabel} इस तारीख ${formattedDate} का चढ़ गया है` 
+        : `${customerName}'s ${displayLabel} for date ${formattedDate} has been saved`;
+
+      setMessage({ text: msgText, type: "success" });
+      speak(voiceText);
+
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
     } catch (err) {
       alert("Error saving data");
     }
@@ -112,9 +140,8 @@ useEffect(() => {
         {message.text && <div className={`toast-msg ${message.type}`}>{message.text}</div>}
         
         {customers.map((c) => {
-          const currentQty = milk[c.id] || 0;
-          // यहाँ लेबल ढूंढने के लिए Number() का उपयोग किया गया है ताकि 0 और 0.00 मैच हो जाएं
-          const matchedOption = milkOptions.find(o => Number(o.value) === Number(currentQty));
+          const currentQty = milk[c.id] || "0.50";
+          const matchedOption = milkOptions.find(o => parseFloat(o.value) === parseFloat(currentQty));
           const optionLabel = matchedOption ? matchedOption.label : `${currentQty}kg`;
 
           return (
@@ -129,7 +156,7 @@ useEffect(() => {
               <div className="actions-v2">
                 <select 
                   value={currentQty} 
-                  onChange={(e) => setMilk({ ...milk, [c.id]: parseFloat(e.target.value) })}
+                  onChange={(e) => setMilk({ ...milk, [c.id]: e.target.value })}
                   className="qty-dropdown"
                 >
                   {milkOptions.map(opt => (
@@ -138,11 +165,11 @@ useEffect(() => {
                 </select>
 
                 <button 
-                  className={`big-save-btn ${Number(currentQty) === 0 ? 'is-naga' : ''}`}
+                  className={`big-save-btn ${parseFloat(currentQty) === 0 ? 'is-naga' : ''}`}
                   onClick={() => saveMilk(c.id)}
                 >
                   <span className="btn-label">{optionLabel}</span>
-                  <span className="btn-sub">{t("Tap to Save", "चढ़ाए")}</span>
+                  <span className="btn-sub">{t("Save", "चढ़ाएं")}</span>
                 </button>
               </div>
             </div>
@@ -160,7 +187,7 @@ useEffect(() => {
         .date-selector { background: rgba(255,255,255,0.15); padding: 8px 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; }
         .date-selector input { border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-family: inherit; outline: none; }
         .entry-list { padding: 15px; }
-        .toast-msg { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: #2e7d32; color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-weight: 600; text-align: center; white-space: nowrap; }
+        .toast-msg { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: #2e7d32; color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-weight: 600; text-align: center; white-space: normal; width: 80%; }
         .entry-card { background: white; margin-bottom: 15px; padding: 18px; border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .info { margin-bottom: 12px; }
         .name { display: block; font-weight: 700; font-size: 17px; color: #1a1a1a; }

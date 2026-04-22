@@ -32,7 +32,7 @@ useEffect(() => {
     { id: 5, en: "Animal Feed", hi: "जानवर का खाना", img: "https://cdn.pixabay.com/photo/2022/12/09/20/49/buffalo-7645996_1280.jpg", icon: "🌾", color: "#efebe9", desc: "Feed & Ration" },
     { id: 6, en: "Expenses", hi: "खर्चे लिखें", img: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200", icon: "💸", color: "#ffebee", desc: "Daily spending" },
     { id: 7, en: "Customers", hi: "ग्राहक ", img: "https://c8.alamy.com/comp/2JEKY1D/young-smiling-male-customer-choosing-milk-and-dairy-products-in-supermarket-2JEKY1D.jpg", icon: "👥", color: "#e0f2f1", desc: "Manage people" },
-    { id: 8, en: "Milk Stock", hi: "दूध का स्टॉक", img: "https://images.unsplash.com/photo-1528498033973-3c070444eb31?auto=format&fit=crop&q=80&w=200", icon: "🧊", color: "#e8eaf6", desc: "Available Milk" },
+    { id: 8, en: "Milk Stock", hi: "दूध का स्टॉक", img: "https://image.slidesdocs.com/responsive-images/sheets/employee-equipment-list-record-details-form-excel-template_ff73757266__max.jpg", icon: "🧊", color: "#e8eaf6", desc: "Available Milk" },
     { id: 9, en: "Health/Doctor", hi: "डॉक्टर/इलाज", img: "https://images.unsplash.com/photo-1584036561566-baf241f1467d?auto=format&fit=crop&q=80&w=200", icon: "🩺", color: "#fce4ec", desc: "Animal health" },
     { id: 10, en: "Settings", hi: "सेटिंग्स", img: "https://images.unsplash.com/photo-1510511459019-5dda7724fd87?auto=format&fit=crop&q=80&w=200", icon: "⚙️", color: "#eceff1", desc: "Profile setup" },
   ];

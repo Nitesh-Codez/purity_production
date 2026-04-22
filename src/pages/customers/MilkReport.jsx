@@ -83,7 +83,6 @@ function MilkReport() {
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
 
-  // बैकएंड में हिसाब सेव करने के लिए फंक्शन
   const saveReportToDB = async () => {
     try {
       setLoading(true);
@@ -149,17 +148,17 @@ function MilkReport() {
         {loading ? (
           <div className="center-msg">{t("Loading...", "डाटा आ रहा है...")}</div>
         ) : (
-          <div className="table-card">
+          <div className="table-container">
             <table className="report-table">
               <thead>
                 <tr>
-                  <th className="sticky-col first-header" style={{ width: '85px' }}>{t("Date", "तारीख")}</th>
+                  <th className="sticky-col sticky-header first-cell">{t("Date", "तारीख")}</th>
                   {customers.map(name => (
-                    <th key={name} style={{ width: '105px' }}>
+                    <th key={name} className="sticky-header">
                       {isHindi ? (translatedNames[name] || name) : name}
                     </th>
                   ))}
-                  <th className="total-col-head" style={{ width: '105px' }}>{t("Total", "कुल")}</th>
+                  <th className="sticky-header total-col-head">{t("Total", "कुल")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,6 +178,8 @@ function MilkReport() {
                     <td className="row-total">{getDateTotal(date)}</td>
                   </tr>
                 ))}
+              </tbody>
+              <tfoot>
                 <tr className="grand-total-row">
                   <td className="sticky-col total-label">{t("Total", "कुल")}</td>
                   {customers.map(name => (
@@ -188,86 +189,94 @@ function MilkReport() {
                     {formatTotal(reportData.reduce((s, i) => s + parseFloat(i.milk_quantity), 0))}
                   </td>
                 </tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
         )}
       </main>
 
       <style>{`
-        .report-wrapper { background: #f0f2f5; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
-        .report-header { background: #1a237e; color: white; padding: 15px 20px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .report-wrapper { background: #f0f2f5; min-height: 100vh; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; }
+        .report-header { background: #1a237e; color: white; padding: 15px 20px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); flex-shrink: 0; }
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .back-btn { background: none; border: none; color: white; font-size: 32px; cursor: pointer; line-height: 1; }
         .lang-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 10px; cursor: pointer; }
         .filters { display: flex; gap: 8px; align-items: center; }
         .filters select { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; outline: none; font-size: 13px; }
-        
-        .save-btn { 
-          background: #ffc107; 
-          color: #000; 
-          border: none; 
-          padding: 10px 12px; 
-          border-radius: 8px; 
-          font-weight: 800; 
-          font-size: 12px; 
-          cursor: pointer;
-          white-space: nowrap;
-        }
+        .save-btn { background: #ffc107; color: #000; border: none; padding: 10px 12px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; white-space: nowrap; }
 
-        .report-content { padding: 8px; }
-        .table-card { background: white; border-radius: 12px; overflow: auto; max-height: 78vh; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #aaa; }
+        .report-content { flex: 1; padding: 8px; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* Table Container Fix */
+        .table-container { 
+          background: white; 
+          border-radius: 12px; 
+          overflow: auto; 
+          border: 1px solid #aaa;
+          height: calc(100vh - 160px); /* Sets dynamic height */
+          position: relative;
+        }
         
         .report-table { 
-          width: 100%; 
+          width: max-content; /* Allow table to define its width based on content */
           border-collapse: separate; 
           border-spacing: 0; 
-          table-layout: fixed; 
-          min-width: ${190 + customers.length * 105}px; 
         }
         
         .report-table th, .report-table td { 
           border: 0.5px solid #ccc; 
-          padding: 12px 2px; 
+          padding: 12px 8px; 
           text-align: center; 
           font-size: 12px; 
-          overflow: hidden;
-          text-overflow: ellipsis;
+          min-width: 100px;
           white-space: nowrap;
         }
-        
-        .report-table th { 
-          background: #c0ffa3; 
-          color: #000; 
+
+        /* STICKY HEADERS (Customer Names) */
+        .sticky-header {
+          position: sticky;
+          top: 0;
+          background: #c0ffa3 !important;
+          color: #000;
+          z-index: 100; /* Higher than sticky columns */
           font-weight: 800;
-          position: sticky; 
-          top: 0; 
-          z-index: 50; 
-          border-bottom: 2.5px solid #1a237e; 
-          text-transform: uppercase;
+          border-bottom: 2px solid #1a237e !important;
         }
-        
+
+        /* STICKY LEFT COLUMN (Dates) */
         .sticky-col { 
           position: sticky; 
           left: 0; 
-          background: #fff !important; 
-          z-index: 40 !important; 
+          background: #f8f9fa !important; 
+          z-index: 90; 
           border-right: 3px solid #1a237e !important; 
-          font-weight: bold; 
+          font-weight: bold;
+          min-width: 80px !important;
         }
-        
-        .first-header { z-index: 60 !important; background: #f8f9fa !important; }
-        .total-label { background: #1a237e !important; color: white !important; text-align: center; }
+
+        /* Top-Left Corner Cell Fix */
+        .first-cell {
+          z-index: 110 !important; /* Top-most priority */
+          left: 0;
+          top: 0;
+        }
+
+        /* STICKY FOOTER (Totals at bottom) */
+        .grand-total-row {
+          position: sticky;
+          bottom: 0;
+          background: #1a237e;
+          z-index: 100;
+        }
+        .grand-total-row td { color: white !important; font-weight: bold; border-top: 2px solid white; }
+
+        .total-label { background: #1a237e !important; color: white !important; z-index: 105 !important; }
 
         .less-qty { background-color: #ffebee !important; color: #c62828 !important; } 
         .qty-val { color: #2e7d32; font-weight: 700; }
-        .naga-text { color: #d32f2f; font-weight: 900; font-size: 9px; }
-        
-        .row-total { background: #f8f9fa; font-weight: 800; color: #000; border-left: 2px solid #1a237e; }
-        .grand-total-row { background: #1a237e; color: white; font-weight: bold; position: sticky; bottom: 0; z-index: 45; }
-        .grand-total-row td { color: white !important; border-top: 2px solid #fff; }
-        
-        .final-sum { background: #ffc107 !important; color: #000 !important; font-weight: 900; border: 2px solid #000 !important; }
+        .naga-text { color: #d32f2f; font-weight: 900; font-size: 10px; }
+        .row-total { background: #f8f9fa; font-weight: 800; }
+        .final-sum { background: #ffc107 !important; color: #000 !important; font-weight: 900; }
         .center-msg { text-align: center; padding: 50px; color: #666; font-weight: bold; }
       `}</style>
     </div>
