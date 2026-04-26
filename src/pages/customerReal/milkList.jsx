@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 
 const MilkList = () => {
   const now = new Date();
 
-  // Environment variable se URL uthana
+  // Environment variable
   const API_BASE_URL = process.env.REACT_APP_API_URL || "https://purity-production-backend.onrender.com";
 
   // States
@@ -13,7 +13,6 @@ const MilkList = () => {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  // Aapke link ke mutabik userId 19 hai
   const userId = 19; 
 
   const months = [
@@ -25,10 +24,10 @@ const MilkList = () => {
 
   const years = [2024, 2025, 2026];
 
-  const fetchMilkData = async () => {
+  // Logic wrapped in useCallback to fix Vercel Build Error
+  const fetchMilkData = useCallback(async () => {
     setLoading(true);
     try {
-      // CORRECT PATH INTEGRATION: /api/monthly-bill added here
       const res = await axios.get(
         `${API_BASE_URL}/api/monthly-bill/customer/${userId}/milk`,
         {
@@ -50,11 +49,12 @@ const MilkList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, selectedMonth, selectedYear, userId]); // Dependencies added here
 
+  // useEffect now correctly depends on fetchMilkData
   useEffect(() => {
     fetchMilkData();
-  }, [selectedMonth, selectedYear]);
+  }, [fetchMilkData]);
 
   return (
     <div style={containerStyle}>
@@ -91,14 +91,14 @@ const MilkList = () => {
 
       {/* Main Content */}
       {loading ? (
-        <div style={msgStyle}>Loading records from Render...</div>
+        <div style={msgStyle}>Loading records from Server...</div>
       ) : milkList.length > 0 ? (
         <div style={tableWrapperStyle}>
           <table style={tableStyle}>
             <thead>
               <tr style={theadRowStyle}>
                 <th style={thStyle}>Date</th>
-                <th style={thStyle}>Quantity (L)</th>
+                <th style={thStyle}>Quantity</th>
               </tr>
             </thead>
             <tbody>
@@ -117,7 +117,7 @@ const MilkList = () => {
             </tbody>
             <tfoot>
               <tr style={tfootStyle}>
-                <td style={tdStyle}>Total Monthly Consumption</td>
+                <td style={tdStyle}>Total Monthly</td>
                 <td style={tdStyle}>
                   {milkList.reduce((acc, curr) => acc + parseFloat(curr.milk_quantity || 0), 0).toFixed(2)} Litres
                 </td>
@@ -134,22 +134,70 @@ const MilkList = () => {
   );
 };
 
-// --- CSS-in-JS Styles ---
-const containerStyle = { padding: "20px", maxWidth: "800px", margin: "20px auto", fontFamily: "sans-serif", backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" };
-const headerStyle = { textAlign: "center", color: "#2c3e50", marginBottom: "30px", borderBottom: "2px solid #3498db", display: "inline-block", width: "100%", paddingBottom: "10px" };
-const filterContainerStyle = { display: "flex", gap: "20px", marginBottom: "30px", justifyContent: "center", alignItems: "flex-end", flexWrap: "wrap" };
+// --- Updated UI Styles (Premium Look) ---
+const containerStyle = { 
+  padding: "20px", 
+  maxWidth: "800px", 
+  margin: "20px auto", 
+  fontFamily: "'Segoe UI', Roboto, sans-serif", 
+  backgroundColor: "#ffffff", 
+  borderRadius: "16px", 
+  boxShadow: "0 10px 30px rgba(0,0,0,0.08)" 
+};
+
+const headerStyle = { 
+  textAlign: "center", 
+  color: "#1a237e", 
+  marginBottom: "25px", 
+  fontSize: "24px",
+  fontWeight: "700"
+};
+
+const filterContainerStyle = { 
+  display: "flex", 
+  gap: "15px", 
+  marginBottom: "25px", 
+  justifyContent: "center", 
+  alignItems: "flex-end", 
+  flexWrap: "wrap",
+  background: "#f8f9fa",
+  padding: "15px",
+  borderRadius: "12px"
+};
+
 const inputGroupStyle = { display: "flex", flexDirection: "column", gap: "5px" };
-const labelStyle = { fontSize: "0.85rem", fontWeight: "bold", color: "#7f8c8d" };
-const selectStyle = { padding: "10px", borderRadius: "6px", border: "1px solid #dcdde1", backgroundColor: "#f5f6fa", cursor: "pointer", minWidth: "120px" };
-const refreshBtnStyle = { padding: "10px 20px", backgroundColor: "#3498db", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" };
-const tableWrapperStyle = { overflowX: "auto" };
-const tableStyle = { width: "100%", borderCollapse: "collapse", marginTop: "10px" };
-const theadRowStyle = { backgroundColor: "#3498db", color: "white" };
-const thStyle = { padding: "15px", textAlign: "center" };
-const tdStyle = { padding: "12px", textAlign: "center", borderBottom: "1px solid #f1f2f6" };
-const zebraRowStyle = { backgroundColor: "#f9f9f9" };
-const tfootStyle = { backgroundColor: "#2c3e50", color: "#fff", fontWeight: "bold" };
-const msgStyle = { textAlign: "center", padding: "20px", color: "#3498db" };
-const noDataStyle = { textAlign: "center", padding: "40px", backgroundColor: "#f5f6fa", borderRadius: "8px", color: "#7f8c8d", border: "1px dashed #dcdde1" };
+const labelStyle = { fontSize: "0.75rem", fontWeight: "bold", color: "#546e7a", textTransform: "uppercase" };
+
+const selectStyle = { 
+  padding: "10px 15px", 
+  borderRadius: "8px", 
+  border: "1px solid #cfd8dc", 
+  backgroundColor: "#fff", 
+  cursor: "pointer", 
+  outline: "none",
+  fontSize: "14px",
+  fontWeight: "600"
+};
+
+const refreshBtnStyle = { 
+  padding: "10px 20px", 
+  backgroundColor: "#1a237e", 
+  color: "white", 
+  border: "none", 
+  borderRadius: "8px", 
+  cursor: "pointer", 
+  fontWeight: "bold",
+  transition: "0.3s"
+};
+
+const tableWrapperStyle = { overflowX: "auto", borderRadius: "12px", border: "1px solid #e0e0e0" };
+const tableStyle = { width: "100%", borderCollapse: "collapse" };
+const theadRowStyle = { backgroundColor: "#1a237e", color: "white" };
+const thStyle = { padding: "15px", textAlign: "center", fontSize: "14px" };
+const tdStyle = { padding: "12px", textAlign: "center", borderBottom: "1px solid #eceff1", color: "#37474f" };
+const zebraRowStyle = { backgroundColor: "#fcfdff" };
+const tfootStyle = { backgroundColor: "#e8eaf6", color: "#1a237e", fontWeight: "800" };
+const msgStyle = { textAlign: "center", padding: "20px", color: "#1a237e", fontWeight: "600" };
+const noDataStyle = { textAlign: "center", padding: "40px", backgroundColor: "#eceff1", borderRadius: "12px", color: "#455a64", border: "1px dashed #b0bec5" };
 
 export default MilkList;
