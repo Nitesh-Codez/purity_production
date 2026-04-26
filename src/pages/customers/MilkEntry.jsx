@@ -28,12 +28,30 @@ function MilkEntry() {
     { label: "3kg", value: "3.00" },
   ];
 
-  // Voice Functionality
+  // Desi Pronunciation Logic
+  const getHindiPronunciation = (val) => {
+    const qty = parseFloat(val);
+    if (qty === 0) return "नागा";
+    if (qty === 0.25) return "ढाई सौ ग्राम";
+    if (qty === 0.50) return "आधा किलो";
+    if (qty === 0.75) return "तीन पाव";
+    if (qty === 1.00) return "एक किलो";
+    if (qty === 1.25) return "सवा किलो";
+    if (qty === 1.50) return "डेढ़ किलो";
+    if (qty === 2.00) return "दो किलो";
+    if (qty === 2.50) return "ढाई किलो";
+    if (qty === 3.00) return "तीन किलो";
+    return `${qty} किलो`;
+  };
+
+  // Month names for clean Hindi voice
+  const hindiMonths = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
+
   const speak = (text) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = isHindi ? 'hi-IN' : 'en-US';
-      utterance.rate = 1.0;
+      utterance.rate = 0.9; // Slightly slower for clarity
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -44,16 +62,13 @@ function MilkEntry() {
       const data = res.data.data;
       setCustomers(data);
 
-      // Local storage se last saved values uthana
       const savedMilkData = JSON.parse(localStorage.getItem('last_milk_entries')) || {};
       const defaults = {};
       const namesToTranslate = [];
 
       data.forEach(c => {
-        // Preference: 1. Last saved in session, 2. DB default, 3. 0.50
         const lastVal = savedMilkData[c.id];
         const dbDefault = c.default_milk_quantity !== null ? parseFloat(c.default_milk_quantity).toFixed(2) : "0.50";
-        
         defaults[c.id] = lastVal !== undefined ? lastVal : dbDefault;
         if (c.name) namesToTranslate.push(c.name);
       });
@@ -92,19 +107,28 @@ function MilkEntry() {
         delivery_date: selectedDate
       });
 
-      // Update LocalStorage to remember this value for next time
       const currentSaved = JSON.parse(localStorage.getItem('last_milk_entries')) || {};
       currentSaved[id] = qty;
       localStorage.setItem('last_milk_entries', JSON.stringify(currentSaved));
 
-      // Date format for message (DD-MM-YYYY)
+      // Date Formatting for UI (DD-MM-YYYY)
       const dateParts = selectedDate.split('-');
-      const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+      const formattedDateUI = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+      
+      // Date Formatting for Voice (22 April)
+      const day = parseInt(dateParts[2]);
+      const month = hindiMonths[parseInt(dateParts[1]) - 1];
+      const voiceDate = `${day} ${month}`;
 
-      const msgText = `${customerName}: ${displayLabel} (${formattedDate}) ${t("Saved", "चढ़ गया")}`;
+      const desiQty = getHindiPronunciation(qty);
+
+      // UI Message Text
+      const msgText = `${customerName}: ${displayLabel} (${formattedDateUI}) ${t("Saved", "चड़ गया")}`;
+
+      // Voice Text logic (Clean Hindi)
       const voiceText = isHindi 
-        ? `${customerName} का ${displayLabel} इस तारीख ${formattedDate} का चढ़ गया है` 
-        : `${customerName}'s ${displayLabel} for date ${formattedDate} has been saved`;
+        ? `${customerName} का ${voiceDate} का ${desiQty} दूध चड़ गया है` 
+        : `${customerName}'s ${displayLabel} for ${day} ${dateParts[1]} has been saved`;
 
       setMessage({ text: msgText, type: "success" });
       speak(voiceText);
