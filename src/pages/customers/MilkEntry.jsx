@@ -6,6 +6,7 @@ function MilkEntry() {
   const navigate = useNavigate();
   const [isHindi, setIsHindi] = useState(true);
   const [customers, setCustomers] = useState([]);
+  const [selectedShift, setSelectedShift] = useState(null); // null means shift selection screen
   const [milk, setMilk] = useState({});
   const [translatedData, setTranslatedData] = useState({});
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
@@ -47,11 +48,30 @@ function MilkEntry() {
   // Month names for clean Hindi voice
   const hindiMonths = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
 
+  // Robust Android-Compatible Speech Function
   const speak = (text) => {
     if ('speechSynthesis' in window) {
+      // Clear any stuck queues
+      window.speechSynthesis.cancel();
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = isHindi ? 'hi-IN' : 'en-US';
       utterance.rate = 0.9; // Slightly slower for clarity
+
+      // Attempt to pick an explicit Hindi voice if available on Android
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const targetVoice = voices.find(v => 
+          isHindi ? (v.lang.includes('hi') || v.lang.includes('IN')) : v.lang.includes('en')
+        );
+        if (targetVoice) {
+          utterance.voice = targetVoice;
+        }
+      }
+
+      // CRITICAL: Prevent garbage collection on Android mobile browsers
+      window._speechUtteranceRef = utterance;
+
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -59,7 +79,10 @@ function MilkEntry() {
   const fetchData = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/api/customers`);
-      const data = res.data.data;
+      const allData = res.data.data;
+      
+      // Filter out inactive customers (is_active === false)
+      const data = allData.filter(c => c.is_active !== false);
       setCustomers(data);
 
       const savedMilkData = JSON.parse(localStorage.getItem('last_milk_entries')) || {};
@@ -91,11 +114,20 @@ function MilkEntry() {
 
   useEffect(() => {
     fetchData();
+    // Preload voices for Android webviews
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      }
+    }
   }, [fetchData]);
 
   const saveMilk = async (id) => {
     const qty = milk[id];
     const customer = customers.find(c => c.id === id);
+    if (!customer) return;
+
     const selectedOption = milkOptions.find(o => parseFloat(o.value) === parseFloat(qty));
     const customerName = isHindi ? (translatedData[customer.name] || customer.name) : customer.name;
     const displayLabel = parseFloat(qty) === 0 ? t("Holiday", "नागा") : selectedOption?.label;
@@ -116,8 +148,8 @@ function MilkEntry() {
       const formattedDateUI = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
       
       // Date Formatting for Voice (22 April)
-      const day = parseInt(dateParts[2]);
-      const month = hindiMonths[parseInt(dateParts[1]) - 1];
+      const day = parseInt(dateParts[2], 10);
+      const month = hindiMonths[parseInt(dateParts[1], 10) - 1];
       const voiceDate = `${day} ${month}`;
 
       const desiQty = getHindiPronunciation(qty);
@@ -139,12 +171,45 @@ function MilkEntry() {
     }
   };
 
+  // Filter active customers by selected shift
+  const filteredCustomers = customers.filter(c => {
+    if (!selectedShift) return true;
+    const shiftVal = (c.shift || "Morning").toLowerCase();
+    if (selectedShift === "Morning") {
+      return shiftVal.includes("morning") || shiftVal.includes("सुबह");
+    } else {
+      return shiftVal.includes("night") || shiftVal.includes("evening") || shiftVal.includes("शाम") || shiftVal.includes("रात");
+    }
+  });
+
+  const morningCount = customers.filter(c => {
+    const s = (c.shift || "Morning").toLowerCase();
+    return s.includes("morning") || s.includes("सुबह");
+  }).length;
+
+  const nightCount = customers.length - morningCount;
+
   return (
     <div className="entry-wrapper">
       <header className="entry-header">
         <div className="header-top">
-          <button className="back-btn" onClick={() => navigate(-1)}>‹</button>
-          <h1>{t("Milk Entry", "दूध चढ़ाएं")}</h1>
+          <button 
+            className="back-btn" 
+            onClick={() => {
+              if (selectedShift) {
+                setSelectedShift(null);
+              } else {
+                navigate(-1);
+              }
+            }}
+          >
+            ‹
+          </button>
+          <h1>
+            {selectedShift 
+              ? `${selectedShift === "Morning" ? t("Morning Shift", "सुबह की शिफ्ट") : t("Night Shift", "शाम की शिफ्ट")}` 
+              : t("Milk Entry", "दूध चढ़ाएं")}
+          </h1>
           <button className="lang-btn" onClick={() => setIsHindi(!isHindi)}>
             {isHindi ? "English" : "हिंदी"}
           </button>
@@ -162,43 +227,84 @@ function MilkEntry() {
 
       <main className="entry-list">
         {message.text && <div className={`toast-msg ${message.type}`}>{message.text}</div>}
-        
-        {customers.map((c) => {
-          const currentQty = milk[c.id] || "0.50";
-          const matchedOption = milkOptions.find(o => parseFloat(o.value) === parseFloat(currentQty));
-          const optionLabel = matchedOption ? matchedOption.label : `${currentQty}kg`;
 
-          return (
-            <div key={c.id} className="entry-card">
-              <div className="info">
-                <span className="name">
-                  {isHindi ? (translatedData[c.name] || c.name) : c.name}
-                </span>
-                <span className="phone">📞 {c.mobile}</span>
+        {/* STEP 1: Shift Selection Screen */}
+        {!selectedShift ? (
+          <div className="shift-selection-container">
+            <h2 className="shift-heading">{t("Select Delivery Shift", "वितरण शिफ्ट चुनें")}</h2>
+            
+            <div className="shift-cards-grid">
+              <div className="shift-card-option morning-card" onClick={() => setSelectedShift("Morning")}>
+                <div className="shift-icon">🌅</div>
+                <div className="shift-info">
+                  <h3>{t("Morning Shift", "सुबह की शिफ्ट")}</h3>
+                  <p>{morningCount} {t("Customers", "ग्राहक")}</p>
+                </div>
+                <div className="shift-arrow">›</div>
               </div>
 
-              <div className="actions-v2">
-                <select 
-                  value={currentQty} 
-                  onChange={(e) => setMilk({ ...milk, [c.id]: e.target.value })}
-                  className="qty-dropdown"
-                >
-                  {milkOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-
-                <button 
-                  className={`big-save-btn ${parseFloat(currentQty) === 0 ? 'is-naga' : ''}`}
-                  onClick={() => saveMilk(c.id)}
-                >
-                  <span className="btn-label">{optionLabel}</span>
-                  <span className="btn-sub">{t("Save", "चढ़ाएं")}</span>
-                </button>
+              <div className="shift-card-option night-card" onClick={() => setSelectedShift("Night")}>
+                <div className="shift-icon">🌙</div>
+                <div className="shift-info">
+                  <h3>{t("Night / Evening Shift", "शाम / रात की शिफ्ट")}</h3>
+                  <p>{nightCount} {t("Customers", "ग्राहक")}</p>
+                </div>
+                <div className="shift-arrow">›</div>
               </div>
             </div>
-          );
-        })}
+          </div>
+        ) : (
+          /* STEP 2: Customer List for Selected Shift */
+          <>
+            <div className="shift-indicator-bar">
+              <span>{selectedShift === "Morning" ? "🌅 " + t("Morning Shift", "सुबह की शिफ्ट") : "🌙 " + t("Night Shift", "शाम की शिफ्ट")}</span>
+              <button className="change-shift-link" onClick={() => setSelectedShift(null)}>
+                {t("Change Shift", "शिफ्ट बदलें")}
+              </button>
+            </div>
+
+            {filteredCustomers.length === 0 ? (
+              <div className="no-customers">{t("No active customers found in this shift.", "इस शिफ्ट में कोई सक्रिय ग्राहक नहीं मिला।")}</div>
+            ) : (
+              filteredCustomers.map((c) => {
+                const currentQty = milk[c.id] || "0.50";
+                const matchedOption = milkOptions.find(o => parseFloat(o.value) === parseFloat(currentQty));
+                const optionLabel = matchedOption ? matchedOption.label : `${currentQty}kg`;
+
+                return (
+                  <div key={c.id} className="entry-card">
+                    <div className="info">
+                      <span className="name">
+                        {isHindi ? (translatedData[c.name] || c.name) : c.name}
+                      </span>
+                      <span className="phone">📞 {c.mobile}</span>
+                    </div>
+
+                    <div className="actions-v2">
+                      <select 
+                        value={currentQty} 
+                        onChange={(e) => setMilk({ ...milk, [c.id]: e.target.value })}
+                        className="qty-dropdown"
+                      >
+                        {milkOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+
+                      <button 
+                        className={`big-save-btn ${parseFloat(currentQty) === 0 ? 'is-naga' : ''}`}
+                        onClick={() => saveMilk(c.id)}
+                      >
+                        <span className="btn-label">{optionLabel}</span>
+                        <span className="btn-sub">{t("Save", "चढ़ाएं")}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
       </main>
 
       <style>{`
@@ -211,6 +317,24 @@ function MilkEntry() {
         .date-selector { background: rgba(255,255,255,0.15); padding: 8px 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; }
         .date-selector input { border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-family: inherit; outline: none; }
         .entry-list { padding: 15px; }
+        
+        /* Shift Selection UI */
+        .shift-selection-container { margin-top: 30px; text-align: center; }
+        .shift-heading { font-size: 18px; color: #333; margin-bottom: 20px; font-weight: 700; }
+        .shift-cards-grid { display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; }
+        .shift-card-option { background: white; padding: 20px; border-radius: 16px; display: flex; align-items: center; gap: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 2px solid #e0e0e0; transition: all 0.2s; text-align: left; }
+        .shift-card-option:active { transform: scale(0.98); }
+        .morning-card { border-color: #ffb74d; background: linear-gradient(to right, #fff8e1, #ffffff); }
+        .night-card { border-color: #7986cb; background: linear-gradient(to right, #e8eaf6, #ffffff); }
+        .shift-icon { font-size: 32px; background: rgba(0,0,0,0.04); padding: 10px; border-radius: 12px; }
+        .shift-info { flex: 1; }
+        .shift-info h3 { margin: 0 0 4px 0; font-size: 16px; color: #1a1a1a; font-weight: 700; }
+        .shift-info p { margin: 0; font-size: 13px; color: #666; font-weight: 500; }
+        .shift-arrow { font-size: 24px; color: #888; font-weight: bold; }
+
+        .shift-indicator-bar { background: #e8eaf6; padding: 10px 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 600; color: #1a237e; font-size: 14px; }
+        .change-shift-link { background: #1a237e; color: white; border: none; padding: 5px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; }
+
         .toast-msg { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: #2e7d32; color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-weight: 600; text-align: center; white-space: normal; width: 80%; }
         .entry-card { background: white; margin-bottom: 15px; padding: 18px; border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .info { margin-bottom: 12px; }
@@ -222,6 +346,7 @@ function MilkEntry() {
         .big-save-btn.is-naga { background: #d32f2f; }
         .btn-label { font-size: 14px; font-weight: 800; }
         .btn-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+        .no-customers { text-align: center; padding: 40px; color: #666; font-size: 14px; font-weight: 500; }
       `}</style>
     </div>
   );

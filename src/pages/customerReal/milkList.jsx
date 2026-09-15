@@ -9,7 +9,7 @@ const MilkList = () => {
     process.env.REACT_APP_API_URL ||
     "https://purity-production-backend.onrender.com";
 
-  const [currentUser, setCurrentUser] = useState(() => {
+  const [currentUser] = useState(() => {
     try {
       const stored = localStorage.getItem("user");
       return stored ? JSON.parse(stored) : { id: 19, name: "Customer", role: "customer" };
@@ -30,7 +30,7 @@ const MilkList = () => {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  const t = (en, hi) => (isHindi ? hi : en);
+  const t = useCallback((en, hi) => (isHindi ? hi : en), [isHindi]);
 
   const months = [
     { v: 1, en: "January", hi: "जनवरी" },
@@ -122,7 +122,7 @@ const MilkList = () => {
         setRefreshing(false);
       }
     },
-    [fetchMonthlyMilk, fetchMonthlyBill, isHindi]
+    [fetchMonthlyMilk, fetchMonthlyBill, t]
   );
 
   useEffect(() => {
@@ -232,7 +232,7 @@ const MilkList = () => {
               disabled={refreshing}
               style={buttonStyle}
             >
-              {refreshing ? t("Refreshing...", "रिफ़्रेश हो रहा है...") : t("Refresh Data", "डेटा रीफ्रेश करें")}
+              {refreshing ? t("Refreshing...", "रिफ़्रेश हो रहा है...") : t("Refresh Data", "डेटा रीफ्रेश करें")}
             </button>
           </div>
         </div>

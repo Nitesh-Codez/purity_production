@@ -331,7 +331,7 @@ function CustomerDashboard() {
           .hero-bill-card { padding: 18px 20px; }
           .bill-amount { font-size: 26px; }
           .cust-card-inner { padding: 14px 16px; }
-        }
+        } 
       `}</style>
     </div>
   );
